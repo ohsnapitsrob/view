@@ -1,5 +1,5 @@
 // ====== CONFIG ======
-const MAPTILER_KEY = "PASTE_YOUR_MAPTILER_KEY_HERE";
+const MAPTILER_KEY = "4iGDVzk2f6BFmiqgFyyU";
 const MAP_STYLE = "streets"; // try: basic, streets, outdoors, etc.
 
 // ====== MAP ======
