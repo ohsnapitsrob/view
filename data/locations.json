@@ -15,7 +15,7 @@
     "images": []
   },
   {
-    "id": "cap-first-avenger-stanley-dock",
+    "id": "cap-first-avenger-stanley-dock-liverpool",
     "title": "Captain America: The First Avenger (2011)",
     "type": "Film",
     "collections": ["Marvel", "MCU"],
@@ -26,7 +26,25 @@
     "description": "",
     "keywords": ["Marvel", "Captain America"],
     "aliases": ["First Avenger"],
-    "images": ["https://images.pixieset.com/792546301/32b0c4e7e6836e7b8081d0ccabccf23a-xlarge.jpg", "https://images.pixieset.com/792546301/21e9114b99fb12ca58b8ad1bd53ca775-xlarge.jpg"]
+    "images": [
+      "https://images.pixieset.com/792546301/21e9114b99fb12ca58b8ad1bd53ca775-xlarge.jpg"
+    ]
+  },
+  {
+    "id": "cap-first-avenger-regent-rd-liverpool",
+    "title": "Captain America: The First Avenger (2011)",
+    "type": "Film",
+    "collections": ["Marvel", "MCU"],
+    "place": "Regent Rd, Liverpool",
+    "country": "UK",
+    "lat": 53.422471,
+    "lng": -3.000227,
+    "description": "",
+    "keywords": ["Marvel", "Captain America"],
+    "aliases": ["First Avenger"],
+    "images": [
+      "https://images.pixieset.com/792546301/32b0c4e7e6836e7b8081d0ccabccf23a-xlarge.jpg"
+    ]
   },
   {
     "id": "monte-carlo-louvre",
