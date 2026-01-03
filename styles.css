@@ -2,53 +2,39 @@
   --border: #e7e7e7;
 }
 
+* { box-sizing: border-box; }
+
 html, body {
   height: 100%;
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  overflow: hidden; /* avoids sideways “wiggle” on mobile focus */
 }
 
-/* Keep the map as the bottom layer */
-#map {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-}
-
-/* Prevent Leaflet panes from jumping above UI on some browsers */
-.leaflet-container,
-.leaflet-pane,
-.leaflet-map-pane,
-.leaflet-tile-pane,
-.leaflet-overlay-pane,
-.leaflet-shadow-pane,
-.leaflet-marker-pane,
-.leaflet-top,
-.leaflet-bottom {
-  z-index: 0;
+/* Body becomes a column: topbar then map */
+body {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 /* ======================
-   TOP BAR
+   TOP BAR (in normal flow)
 ====================== */
 
 .topbar {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  right: 12px;
-  z-index: 3000;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 10px;
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
 }
 
 .topbar-inner {
   display: flex;
   gap: 10px;
   align-items: center;
+  width: 100%;
 }
 
 .topbar input[type="search"] {
@@ -60,20 +46,64 @@ html, body {
   font-size: 14px;
 }
 
-.topbar-meta {
-  margin-top: 6px;
-  font-size: 12px;
-  opacity: 0.75;
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
+.topbar-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.count { white-space: nowrap; }
+
+.filter-label {
+  opacity: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mobile: stack buttons under input */
 @media (max-width: 520px) {
   .topbar-inner {
     flex-direction: column;
     align-items: stretch;
   }
-  .topbar .btn {
+
+  .topbar-actions {
     width: 100%;
   }
+
+  .topbar-actions .btn {
+    width: 100%;
+  }
+
+  .topbar-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-label {
+    width: 100%;
+  }
+}
+
+/* ======================
+   MAP (fills remaining space)
+====================== */
+
+#map {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
 }
 
 /* ======================
@@ -83,9 +113,14 @@ html, body {
 .btn {
   border: 1px solid var(--border);
   background: #fff;
-  padding: 8px 10px;
+  padding: 9px 10px;
   border-radius: 10px;
   cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-secondary {
+  background: #fafafa;
 }
 
 .tabs {
@@ -125,12 +160,12 @@ html, body {
   display: block;
 }
 
-/* results modal above topbar */
+/* results modal above everything except location modal */
 #resultsModal {
   z-index: 4500;
 }
 
-/* location modal (your added z-index kept) */
+/* your kept z-index for the location modal */
 .location-modal {
   z-index: 5000;
 }
@@ -182,6 +217,37 @@ html, body {
   font-size: 12px;
   opacity: 0.75;
   margin-top: 4px;
+}
+
+/* ======================
+   MODAL META CHIPS
+====================== */
+
+.modal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.meta-text {
+  opacity: 0.85;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  user-select: none;
+}
+
+.chip:hover {
+  background: #fafafa;
 }
 
 /* ======================
