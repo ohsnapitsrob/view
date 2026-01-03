@@ -2,18 +2,18 @@
 .DS_Store
 Thumbs.db
 
-# Editor
+# Editor folders
 .vscode/
 .idea/
 
 # Logs
 *.log
 
-# Node (if you add tooling later)
+# If you add tooling later
 node_modules/
 dist/
 build/
 
-# Env files (if you ever add them)
+# Env files (if you add them)
 .env
 .env.*
