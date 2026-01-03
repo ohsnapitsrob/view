@@ -29,13 +29,15 @@ App.Modal = (function () {
     closeBtn.onclick = close;
     modal.onclick = (e) => { if (e.target === modal) close(); };
 
-    // Clicking chips applies filter
+    // Clicking chips applies filter AND closes modal (so user sees results immediately)
     mMeta.addEventListener("click", (e) => {
       const el = e.target.closest("[data-kind][data-label]");
       if (!el) return;
       const kind = el.getAttribute("data-kind");
       const label = el.getAttribute("data-label");
+
       App.Search.applyGroupFilter(kind, label);
+      close();
     });
 
     document.addEventListener("keydown", (e) => {
