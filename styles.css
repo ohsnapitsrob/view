@@ -8,7 +8,7 @@ html, body {
   height: 100%;
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  overflow: hidden; /* avoids sideways “wiggle” on mobile focus */
+  overflow: hidden;
 }
 
 /* Body becomes a column: topbar then map */
@@ -19,7 +19,7 @@ body {
 }
 
 /* ======================
-   TOP BAR (in normal flow)
+   TOP BAR
 ====================== */
 
 .topbar {
@@ -71,7 +71,6 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Mobile: stack buttons under input */
 @media (max-width: 520px) {
   .topbar-inner {
     flex-direction: column;
@@ -97,7 +96,7 @@ body {
 }
 
 /* ======================
-   MAP (fills remaining space)
+   MAP
 ====================== */
 
 #map {
