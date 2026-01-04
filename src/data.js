@@ -56,7 +56,6 @@ App.Data = (function () {
 
     row.push(cur);
     if (row.length > 1 || (row.length === 1 && row[0] !== "")) rows.push(row);
-
     return rows;
   }
 
@@ -96,37 +95,43 @@ App.Data = (function () {
   }
 
   // ----------------------
-  // ICONS: SVG pin + glyph
+  // ICONS: SVG pin + legible badge text
   // ----------------------
 
-  // Choose glyph style:
-  // - Emoji: 🎬 📺 🎵 ❓  (default)
-  // - Letters: F / TV / MV / ?  (swap in getGlyphText())
-  function getGlyphText(type) {
+  function getBadgeText(type) {
     const t = normalizeType(type);
-    // Emoji version:
-    if (t === "Film") return "🎬";
-    if (t === "TV") return "📺";
-    if (t === "Music Video") return "🎵";
-    return "❓";
-
-    // Letter version (uncomment to use instead):
-    // if (t === "Film") return "F";
-    // if (t === "TV") return "TV";
-    // if (t === "Music Video") return "MV";
-    // return "?";
+    if (t === "Film") return "F";
+    if (t === "TV") return "TV";
+    if (t === "Music Video") return "MV";
+    return "?";
   }
 
-  function svgPin(color, glyph) {
-    // Pin + white circle + centered glyph
-    // Note: emoji rendering varies by OS; letters are consistent if you prefer.
+  function badgeFontSize(badge) {
+    // Bigger for single char, slightly smaller for 2 chars
+    return badge.length === 1 ? 4.2 : 3.2;
+  }
+
+  function svgPin(color, badge) {
+    const fs = badgeFontSize(badge);
+
+    // High contrast: white circle + dark text + subtle text stroke for clarity
+    // ViewBox 24 keeps path simple; iconSize scales it up.
     const svg =
-      `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24">
+      `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24">
         <path fill="${color}" d="M12 2c-3.314 0-6 2.686-6 6c0 4.5 6 14 6 14s6-9.5 6-14c0-3.314-2.686-6-6-6z"/>
-        <circle cx="12" cy="8" r="3.6" fill="white"/>
-        <text x="12" y="9.15" text-anchor="middle" dominant-baseline="middle"
-              font-size="3.6" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">
-          ${glyph}
+        <circle cx="12" cy="8" r="3.9" fill="white"/>
+        <text x="12" y="8.25"
+              text-anchor="middle"
+              dominant-baseline="middle"
+              font-size="${fs}"
+              font-weight="800"
+              letter-spacing="${badge.length === 2 ? "-0.25" : "0"}"
+              font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+              fill="#111827"
+              stroke="white"
+              stroke-width="0.6"
+              paint-order="stroke">
+          ${badge}
         </text>
       </svg>`;
 
@@ -142,13 +147,13 @@ App.Data = (function () {
       "Misc": "#6b7280"         // gray
     };
     const color = colors[t] || colors["Misc"];
-    const glyph = getGlyphText(t);
+    const badge = getBadgeText(t);
 
     return L.icon({
-      iconUrl: svgPin(color, glyph),
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      popupAnchor: [0, -24]
+      iconUrl: svgPin(color, badge),
+      iconSize: [34, 34],     // bigger + clearer than before
+      iconAnchor: [17, 34],
+      popupAnchor: [0, -26]
     });
   }
 
@@ -184,7 +189,6 @@ App.Data = (function () {
     if (!loc.title || !loc.place) return null;
 
     if (!loc.series && loc.type === "TV") loc.series = loc.title;
-
     return loc;
   }
 
