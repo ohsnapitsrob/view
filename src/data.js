@@ -3,18 +3,16 @@ window.App = window.App || {};
 App.Data = (function () {
   let ALL = [];
   let allMarkers = [];
-  const groupsIndex = new Map(); // "Kind::Label" -> Marker[]
+  const groupsIndex = new Map();
 
   function norm(s) { return (s || "").toString().trim(); }
 
-  // Split pipe-delimited fields: "A | B | C" -> ["A","B","C"]
   function splitPipe(s) {
     const t = norm(s);
     if (!t) return [];
     return t.split("|").map(x => norm(x)).filter(Boolean);
   }
 
-  // Robust-ish CSV parser (handles quotes + commas inside quotes)
   function parseCSV(text) {
     const rows = [];
     let row = [];
@@ -46,7 +44,7 @@ App.Data = (function () {
         if (c === "\r" && next === "\n") i++;
         row.push(cur);
         cur = "";
-        if (row.length > 1 || (row.length === 1 && row[0] !== "")) rows.push(row);
+        if (row.length > 1) rows.push(row);
         row = [];
         continue;
       }
@@ -55,7 +53,7 @@ App.Data = (function () {
     }
 
     row.push(cur);
-    if (row.length > 1 || (row.length === 1 && row[0] !== "")) rows.push(row);
+    if (row.length > 1) rows.push(row);
     return rows;
   }
 
@@ -67,11 +65,8 @@ App.Data = (function () {
     for (let i = 1; i < rows.length; i++) {
       const r = rows[i];
       if (!r || r.every(cell => norm(cell) === "")) continue;
-
       const obj = {};
-      for (let j = 0; j < header.length; j++) {
-        obj[header[j]] = (r[j] ?? "");
-      }
+      for (let j = 0; j < header.length; j++) obj[header[j]] = (r[j] ?? "");
       out.push(obj);
     }
     return out;
@@ -81,10 +76,9 @@ App.Data = (function () {
     const x = norm(t).toLowerCase();
     if (!x) return "Misc";
     if (x === "film" || x === "movie" || x === "movies") return "Film";
-    if (x === "tv" || x === "tv show" || x === "tv shows" || x === "series") return "TV";
+    if (x === "tv" || x === "tv show" || x === "tv shows") return "TV";
     if (x === "music video" || x === "music videos" || x === "mv") return "Music Video";
-    if (x === "misc" || x === "other") return "Misc";
-    return norm(t);
+    return "Misc";
   }
 
   function addToMapList(mapObj, key, val) {
@@ -95,45 +89,46 @@ App.Data = (function () {
   }
 
   // ----------------------
-  // ICONS: SVG pin + legible badge text
+  // ICONS (50px target size)
   // ----------------------
 
   function getBadgeText(type) {
-    const t = normalizeType(type);
-    if (t === "Film") return "F";
-    if (t === "TV") return "TV";
-    if (t === "Music Video") return "MV";
+    if (type === "Film") return "F";
+    if (type === "TV") return "TV";
+    if (type === "Music Video") return "MV";
     return "?";
   }
 
   function badgeFontSize(badge) {
-    // Bigger for single char, slightly smaller for 2 chars
-    return badge.length === 1 ? 4.2 : 3.2;
+    return badge.length === 1 ? 4.6 : 3.6;
   }
 
   function svgPin(color, badge) {
     const fs = badgeFontSize(badge);
 
-    // High contrast: white circle + dark text + subtle text stroke for clarity
-    // ViewBox 24 keeps path simple; iconSize scales it up.
-    const svg =
-      `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24">
-        <path fill="${color}" d="M12 2c-3.314 0-6 2.686-6 6c0 4.5 6 14 6 14s6-9.5 6-14c0-3.314-2.686-6-6-6z"/>
-        <circle cx="12" cy="8" r="3.9" fill="white"/>
-        <text x="12" y="8.25"
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg"
+           width="50" height="50"
+           viewBox="0 0 24 24">
+        <path fill="${color}"
+          d="M12 2c-3.314 0-6 2.686-6 6
+             c0 4.5 6 14 6 14s6-9.5 6-14
+             c0-3.314-2.686-6-6-6z"/>
+        <circle cx="12" cy="8" r="4.2" fill="white"/>
+        <text x="12" y="8.4"
               text-anchor="middle"
               dominant-baseline="middle"
               font-size="${fs}"
               font-weight="800"
-              letter-spacing="${badge.length === 2 ? "-0.25" : "0"}"
               font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
               fill="#111827"
               stroke="white"
-              stroke-width="0.6"
+              stroke-width="0.7"
               paint-order="stroke">
           ${badge}
         </text>
-      </svg>`;
+      </svg>
+    `;
 
     return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
   }
@@ -141,25 +136,28 @@ App.Data = (function () {
   function iconForType(type) {
     const t = normalizeType(type);
     const colors = {
-      "Film": "#2563eb",        // blue
-      "TV": "#16a34a",          // green
-      "Music Video": "#db2777", // pink
-      "Misc": "#6b7280"         // gray
+      Film: "#2563eb",
+      TV: "#16a34a",
+      "Music Video": "#db2777",
+      Misc: "#6b7280"
     };
-    const color = colors[t] || colors["Misc"];
+
     const badge = getBadgeText(t);
+    const color = colors[t] || colors.Misc;
 
     return L.icon({
       iconUrl: svgPin(color, badge),
-      iconSize: [34, 34],     // bigger + clearer than before
-      iconAnchor: [17, 34],
-      popupAnchor: [0, -26]
+
+      // 👇 THIS is the key part
+      iconSize: [50, 50],
+      iconAnchor: [25, 50],
+      popupAnchor: [0, -40]
     });
   }
 
   async function fetchSheetCSV(url) {
     const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) throw new Error(`Failed to fetch CSV: ${url}`);
+    if (!r.ok) throw new Error("Failed to fetch CSV");
     return r.text();
   }
 
@@ -170,10 +168,8 @@ App.Data = (function () {
 
   function postProcessRow(row, fallbackType) {
     const loc = {
-      id: norm(row.id),
       title: norm(row.title),
       type: normalizeType(row.type || fallbackType),
-      series: norm(row.series),
       place: norm(row.place),
       country: norm(row.country),
       lat: coerceNumber(row.lat),
@@ -185,10 +181,8 @@ App.Data = (function () {
       images: splitPipe(row.images)
     };
 
-    if (typeof loc.lat !== "number" || typeof loc.lng !== "number") return null;
     if (!loc.title || !loc.place) return null;
-
-    if (!loc.series && loc.type === "TV") loc.series = loc.title;
+    if (typeof loc.lat !== "number" || typeof loc.lng !== "number") return null;
     return loc;
   }
 
@@ -196,58 +190,48 @@ App.Data = (function () {
     const cfg = window.APP_CONFIG || {};
     const sheets = cfg.SHEETS || {};
 
-    const hasSheets =
-      sheets.movies || sheets.tv || sheets.music_videos || sheets.misc;
+    const sources = [
+      ["Film", sheets.movies],
+      ["TV", sheets.tv],
+      ["Music Video", sheets.music_videos],
+      ["Misc", sheets.misc]
+    ].filter(([, url]) => !!url);
 
     try {
       let locs = [];
 
-      if (hasSheets) {
-        const sources = [
-          ["Film", sheets.movies],
-          ["TV", sheets.tv],
-          ["Music Video", sheets.music_videos],
-          ["Misc", sheets.misc]
-        ].filter(([, url]) => !!url);
+      const texts = await Promise.all(
+        sources.map(([, url]) => fetchSheetCSV(url))
+      );
 
-        const texts = await Promise.all(sources.map(([, url]) => fetchSheetCSV(url)));
-
-        for (let i = 0; i < sources.length; i++) {
-          const [fallbackType] = sources[i];
-          const rows = parseCSV(texts[i]);
-          const objs = rowsToObjects(rows);
-          objs.forEach((r) => {
-            const loc = postProcessRow(r, fallbackType);
-            if (loc) locs.push(loc);
-          });
-        }
-      } else {
-        const r = await fetch("./data/locations.json");
-        const data = await r.json();
-        locs = data
-          .map((r) => postProcessRow(r, r.type))
-          .filter(Boolean);
+      for (let i = 0; i < sources.length; i++) {
+        const [fallbackType] = sources[i];
+        const rows = rowsToObjects(parseCSV(texts[i]));
+        rows.forEach(r => {
+          const loc = postProcessRow(r, fallbackType);
+          if (loc) locs.push(loc);
+        });
       }
 
       ALL = locs;
+      allMarkers = [];
+      groupsIndex.clear();
 
       const markersByTitle = new Map();
       const markersByCollection = new Map();
       const markersByType = new Map();
 
-      allMarkers = [];
-      groupsIndex.clear();
-
-      ALL.forEach((loc) => {
-        const mk = L.marker([loc.lat, loc.lng], { icon: iconForType(loc.type) });
+      ALL.forEach(loc => {
+        const mk = L.marker([loc.lat, loc.lng], {
+          icon: iconForType(loc.type)
+        });
         mk.__loc = loc;
         mk.on("click", () => App.Modal.open(loc));
         loc.__marker = mk;
 
         allMarkers.push(mk);
-
         addToMapList(markersByTitle, loc.title, mk);
-        (loc.collections || []).forEach((c) => addToMapList(markersByCollection, c, mk));
+        loc.collections.forEach(c => addToMapList(markersByCollection, c, mk));
         addToMapList(markersByType, loc.type, mk);
       });
 
@@ -259,8 +243,6 @@ App.Data = (function () {
         keys: [
           { name: "title", weight: 3 },
           { name: "collections", weight: 2.3 },
-          { name: "series", weight: 1.8 },
-          { name: "aliases", weight: 1.8 },
           { name: "place", weight: 1.7 },
           { name: "country", weight: 1.2 },
           { name: "type", weight: 1.1 },
@@ -299,7 +281,7 @@ App.Data = (function () {
       });
     } catch (err) {
       console.error(err);
-      alert("Failed to load data. Check console for details.");
+      alert("Failed to load data");
     }
   }
 
