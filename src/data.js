@@ -6,7 +6,6 @@ App.Data = (function () {
   const groupsIndex = new Map(); // "Kind::Label" -> Marker[]
 
   function norm(s) { return (s || "").toString().trim(); }
-  function safeArr(a) { return Array.isArray(a) ? a : (a ? [a] : []); }
 
   // Split pipe-delimited fields: "A | B | C" -> ["A","B","C"]
   function splitPipe(s) {
@@ -15,7 +14,7 @@ App.Data = (function () {
     return t.split("|").map(x => norm(x)).filter(Boolean);
   }
 
-  // Robust CSV parser (handles quotes + commas inside quotes)
+  // Robust-ish CSV parser (handles quotes + commas inside quotes)
   function parseCSV(text) {
     const rows = [];
     let row = [];
@@ -27,7 +26,6 @@ App.Data = (function () {
       const next = text[i + 1];
 
       if (c === '"' && inQuotes && next === '"') {
-        // escaped quote
         cur += '"';
         i++;
         continue;
@@ -45,7 +43,6 @@ App.Data = (function () {
       }
 
       if ((c === "\n" || c === "\r") && !inQuotes) {
-        // handle CRLF and LF
         if (c === "\r" && next === "\n") i++;
         row.push(cur);
         cur = "";
@@ -57,7 +54,6 @@ App.Data = (function () {
       cur += c;
     }
 
-    // last cell
     row.push(cur);
     if (row.length > 1 || (row.length === 1 && row[0] !== "")) rows.push(row);
 
@@ -71,7 +67,6 @@ App.Data = (function () {
 
     for (let i = 1; i < rows.length; i++) {
       const r = rows[i];
-      // skip empty
       if (!r || r.every(cell => norm(cell) === "")) continue;
 
       const obj = {};
@@ -90,7 +85,6 @@ App.Data = (function () {
     if (x === "tv" || x === "tv show" || x === "tv shows" || x === "series") return "TV";
     if (x === "music video" || x === "music videos" || x === "mv") return "Music Video";
     if (x === "misc" || x === "other") return "Misc";
-    // preserve custom types but title-case-ish
     return norm(t);
   }
 
@@ -101,14 +95,41 @@ App.Data = (function () {
     mapObj.get(k).push(val);
   }
 
-  // --- Icon factory (SVG data URI) ---
-  function svgPin(color) {
-    // simple pin shape
+  // ----------------------
+  // ICONS: SVG pin + glyph
+  // ----------------------
+
+  // Choose glyph style:
+  // - Emoji: 🎬 📺 🎵 ❓  (default)
+  // - Letters: F / TV / MV / ?  (swap in getGlyphText())
+  function getGlyphText(type) {
+    const t = normalizeType(type);
+    // Emoji version:
+    if (t === "Film") return "🎬";
+    if (t === "TV") return "📺";
+    if (t === "Music Video") return "🎵";
+    return "❓";
+
+    // Letter version (uncomment to use instead):
+    // if (t === "Film") return "F";
+    // if (t === "TV") return "TV";
+    // if (t === "Music Video") return "MV";
+    // return "?";
+  }
+
+  function svgPin(color, glyph) {
+    // Pin + white circle + centered glyph
+    // Note: emoji rendering varies by OS; letters are consistent if you prefer.
     const svg =
-      `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24">
+      `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24">
         <path fill="${color}" d="M12 2c-3.314 0-6 2.686-6 6c0 4.5 6 14 6 14s6-9.5 6-14c0-3.314-2.686-6-6-6z"/>
-        <circle cx="12" cy="8" r="2.5" fill="white"/>
+        <circle cx="12" cy="8" r="3.6" fill="white"/>
+        <text x="12" y="9.15" text-anchor="middle" dominant-baseline="middle"
+              font-size="3.6" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">
+          ${glyph}
+        </text>
       </svg>`;
+
     return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
   }
 
@@ -121,11 +142,12 @@ App.Data = (function () {
       "Misc": "#6b7280"         // gray
     };
     const color = colors[t] || colors["Misc"];
+    const glyph = getGlyphText(t);
 
     return L.icon({
-      iconUrl: svgPin(color),
-      iconSize: [28, 28],
-      iconAnchor: [14, 28],
+      iconUrl: svgPin(color, glyph),
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
       popupAnchor: [0, -24]
     });
   }
@@ -142,7 +164,6 @@ App.Data = (function () {
   }
 
   function postProcessRow(row, fallbackType) {
-    // Build loc object expected by app
     const loc = {
       id: norm(row.id),
       title: norm(row.title),
@@ -159,12 +180,9 @@ App.Data = (function () {
       images: splitPipe(row.images)
     };
 
-    // require coords + basic fields
     if (typeof loc.lat !== "number" || typeof loc.lng !== "number") return null;
     if (!loc.title || !loc.place) return null;
 
-    // If series is empty and type is TV, you might want series=title automatically
-    // (optional, but nice)
     if (!loc.series && loc.type === "TV") loc.series = loc.title;
 
     return loc;
@@ -174,7 +192,6 @@ App.Data = (function () {
     const cfg = window.APP_CONFIG || {};
     const sheets = cfg.SHEETS || {};
 
-    // If SHEETS URLs are provided, use them; else fall back to local JSON
     const hasSheets =
       sheets.movies || sheets.tv || sheets.music_videos || sheets.misc;
 
@@ -182,7 +199,6 @@ App.Data = (function () {
       let locs = [];
 
       if (hasSheets) {
-        // Fetch tabs in parallel; missing ones are skipped
         const sources = [
           ["Film", sheets.movies],
           ["TV", sheets.tv],
@@ -192,7 +208,6 @@ App.Data = (function () {
 
         const texts = await Promise.all(sources.map(([, url]) => fetchSheetCSV(url)));
 
-        // Merge
         for (let i = 0; i < sources.length; i++) {
           const [fallbackType] = sources[i];
           const rows = parseCSV(texts[i]);
@@ -203,7 +218,6 @@ App.Data = (function () {
           });
         }
       } else {
-        // Fallback: local json
         const r = await fetch("./data/locations.json");
         const data = await r.json();
         locs = data
@@ -217,7 +231,6 @@ App.Data = (function () {
       const markersByCollection = new Map();
       const markersByType = new Map();
 
-      // Clear previous
       allMarkers = [];
       groupsIndex.clear();
 
@@ -234,11 +247,9 @@ App.Data = (function () {
         addToMapList(markersByType, loc.type, mk);
       });
 
-      // Initial render
       App.Map.rebuildCluster(allMarkers);
       App.State.clearFilter();
 
-      // Fuse indexes
       const fuseLocations = new Fuse(ALL, {
         threshold: 0.35,
         keys: [
@@ -284,7 +295,7 @@ App.Data = (function () {
       });
     } catch (err) {
       console.error(err);
-      alert("Failed to load data from Google Sheets. Check console for details.");
+      alert("Failed to load data. Check console for details.");
     }
   }
 
