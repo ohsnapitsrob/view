@@ -8,6 +8,92 @@ App.Data = (function () {
   function norm(s) { return (s || "").toString().trim(); }
   function safeArr(a) { return Array.isArray(a) ? a : (a ? [a] : []); }
 
+  // Split pipe-delimited fields: "A | B | C" -> ["A","B","C"]
+  function splitPipe(s) {
+    const t = norm(s);
+    if (!t) return [];
+    return t.split("|").map(x => norm(x)).filter(Boolean);
+  }
+
+  // Robust CSV parser (handles quotes + commas inside quotes)
+  function parseCSV(text) {
+    const rows = [];
+    let row = [];
+    let cur = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      const next = text[i + 1];
+
+      if (c === '"' && inQuotes && next === '"') {
+        // escaped quote
+        cur += '"';
+        i++;
+        continue;
+      }
+
+      if (c === '"') {
+        inQuotes = !inQuotes;
+        continue;
+      }
+
+      if (c === "," && !inQuotes) {
+        row.push(cur);
+        cur = "";
+        continue;
+      }
+
+      if ((c === "\n" || c === "\r") && !inQuotes) {
+        // handle CRLF and LF
+        if (c === "\r" && next === "\n") i++;
+        row.push(cur);
+        cur = "";
+        if (row.length > 1 || (row.length === 1 && row[0] !== "")) rows.push(row);
+        row = [];
+        continue;
+      }
+
+      cur += c;
+    }
+
+    // last cell
+    row.push(cur);
+    if (row.length > 1 || (row.length === 1 && row[0] !== "")) rows.push(row);
+
+    return rows;
+  }
+
+  function rowsToObjects(rows) {
+    if (!rows.length) return [];
+    const header = rows[0].map(h => norm(h));
+    const out = [];
+
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      // skip empty
+      if (!r || r.every(cell => norm(cell) === "")) continue;
+
+      const obj = {};
+      for (let j = 0; j < header.length; j++) {
+        obj[header[j]] = (r[j] ?? "");
+      }
+      out.push(obj);
+    }
+    return out;
+  }
+
+  function normalizeType(t) {
+    const x = norm(t).toLowerCase();
+    if (!x) return "Misc";
+    if (x === "film" || x === "movie" || x === "movies") return "Film";
+    if (x === "tv" || x === "tv show" || x === "tv shows" || x === "series") return "TV";
+    if (x === "music video" || x === "music videos" || x === "mv") return "Music Video";
+    if (x === "misc" || x === "other") return "Misc";
+    // preserve custom types but title-case-ish
+    return norm(t);
+  }
+
   function addToMapList(mapObj, key, val) {
     const k = norm(key);
     if (!k) return;
@@ -15,98 +101,191 @@ App.Data = (function () {
     mapObj.get(k).push(val);
   }
 
-  function init() {
-    fetch("./data/locations.json")
-      .then(r => r.json())
-      .then((data) => {
-        ALL = data;
+  // --- Icon factory (SVG data URI) ---
+  function svgPin(color) {
+    // simple pin shape
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24">
+        <path fill="${color}" d="M12 2c-3.314 0-6 2.686-6 6c0 4.5 6 14 6 14s6-9.5 6-14c0-3.314-2.686-6-6-6z"/>
+        <circle cx="12" cy="8" r="2.5" fill="white"/>
+      </svg>`;
+    return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+  }
 
-        const markersByTitle = new Map();
-        const markersByCollection = new Map();
-        const markersByType = new Map();
+  function iconForType(type) {
+    const t = normalizeType(type);
+    const colors = {
+      "Film": "#2563eb",        // blue
+      "TV": "#16a34a",          // green
+      "Music Video": "#db2777", // pink
+      "Misc": "#6b7280"         // gray
+    };
+    const color = colors[t] || colors["Misc"];
 
-        ALL.forEach((loc) => {
-          if (typeof loc.lat !== "number" || typeof loc.lng !== "number") return;
+    return L.icon({
+      iconUrl: svgPin(color),
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      popupAnchor: [0, -24]
+    });
+  }
 
-          // Normalize fields
-          loc.title = norm(loc.title);
-          loc.place = norm(loc.place);
-          loc.country = norm(loc.country);
-          loc.type = norm(loc.type);
-          loc.series = norm(loc.series);
-          loc.description = norm(loc.description);
+  async function fetchSheetCSV(url) {
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error(`Failed to fetch CSV: ${url}`);
+    return r.text();
+  }
 
-          loc.collections = safeArr(loc.collections).map(norm).filter(Boolean);
-          loc.keywords = safeArr(loc.keywords).map(norm).filter(Boolean);
-          loc.aliases = safeArr(loc.aliases).map(norm).filter(Boolean);
+  function coerceNumber(x) {
+    const n = Number((x ?? "").toString().trim());
+    return Number.isFinite(n) ? n : null;
+  }
 
-          const mk = L.marker([loc.lat, loc.lng]);
-          mk.__loc = loc;
-          mk.on("click", () => App.Modal.open(loc));
-          loc.__marker = mk;
+  function postProcessRow(row, fallbackType) {
+    // Build loc object expected by app
+    const loc = {
+      id: norm(row.id),
+      title: norm(row.title),
+      type: normalizeType(row.type || fallbackType),
+      series: norm(row.series),
+      place: norm(row.place),
+      country: norm(row.country),
+      lat: coerceNumber(row.lat),
+      lng: coerceNumber(row.lng),
+      description: norm(row.description),
+      collections: splitPipe(row.collections),
+      keywords: splitPipe(row.keywords),
+      aliases: splitPipe(row.aliases),
+      images: splitPipe(row.images)
+    };
 
-          allMarkers.push(mk);
+    // require coords + basic fields
+    if (typeof loc.lat !== "number" || typeof loc.lng !== "number") return null;
+    if (!loc.title || !loc.place) return null;
 
-          addToMapList(markersByTitle, loc.title, mk);
-          loc.collections.forEach((c) => addToMapList(markersByCollection, c, mk));
-          addToMapList(markersByType, loc.type, mk);
-        });
+    // If series is empty and type is TV, you might want series=title automatically
+    // (optional, but nice)
+    if (!loc.series && loc.type === "TV") loc.series = loc.title;
 
-        // Initial render
-        App.Map.rebuildCluster(allMarkers);
-        App.State.clearFilter();
+    return loc;
+  }
 
-        // Build Fuse indexes
-        const fuseLocations = new Fuse(ALL, {
-          threshold: 0.35,
-          keys: [
-            { name: "title", weight: 3 },
-            { name: "collections", weight: 2.3 },
-            { name: "series", weight: 1.8 },
-            { name: "aliases", weight: 1.8 },
-            { name: "place", weight: 1.7 },
-            { name: "country", weight: 1.2 },
-            { name: "type", weight: 1.1 },
-            { name: "keywords", weight: 1.4 },
-            { name: "description", weight: 0.8 }
-          ]
-        });
+  async function init() {
+    const cfg = window.APP_CONFIG || {};
+    const sheets = cfg.SHEETS || {};
 
-        // Groups list + groupsIndex
-        const groups = [];
+    // If SHEETS URLs are provided, use them; else fall back to local JSON
+    const hasSheets =
+      sheets.movies || sheets.tv || sheets.music_videos || sheets.misc;
 
-        markersByTitle.forEach((arr, title) => {
-          groups.push({ kind: "Title", label: title, count: arr.length });
-          groupsIndex.set(`Title::${title}`, arr);
-        });
+    try {
+      let locs = [];
 
-        markersByCollection.forEach((arr, col) => {
-          groups.push({ kind: "Collection", label: col, count: arr.length });
-          groupsIndex.set(`Collection::${col}`, arr);
-        });
+      if (hasSheets) {
+        // Fetch tabs in parallel; missing ones are skipped
+        const sources = [
+          ["Film", sheets.movies],
+          ["TV", sheets.tv],
+          ["Music Video", sheets.music_videos],
+          ["Misc", sheets.misc]
+        ].filter(([, url]) => !!url);
 
-        markersByType.forEach((arr, type) => {
-          groups.push({ kind: "Type", label: type, count: arr.length });
-          groupsIndex.set(`Type::${type}`, arr);
-        });
+        const texts = await Promise.all(sources.map(([, url]) => fetchSheetCSV(url)));
 
-        const fuseGroups = new Fuse(groups, {
-          threshold: 0.35,
-          keys: ["label", "kind"]
-        });
+        // Merge
+        for (let i = 0; i < sources.length; i++) {
+          const [fallbackType] = sources[i];
+          const rows = parseCSV(texts[i]);
+          const objs = rowsToObjects(rows);
+          objs.forEach((r) => {
+            const loc = postProcessRow(r, fallbackType);
+            if (loc) locs.push(loc);
+          });
+        }
+      } else {
+        // Fallback: local json
+        const r = await fetch("./data/locations.json");
+        const data = await r.json();
+        locs = data
+          .map((r) => postProcessRow(r, r.type))
+          .filter(Boolean);
+      }
 
-        // Hand to Search module
-        App.Search.setData({
-          fuseLoc: fuseLocations,
-          fuseGrp: fuseGroups,
-          groupsIdx: groupsIndex,
-          allMk: allMarkers
-        });
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("Failed to load data/locations.json");
+      ALL = locs;
+
+      const markersByTitle = new Map();
+      const markersByCollection = new Map();
+      const markersByType = new Map();
+
+      // Clear previous
+      allMarkers = [];
+      groupsIndex.clear();
+
+      ALL.forEach((loc) => {
+        const mk = L.marker([loc.lat, loc.lng], { icon: iconForType(loc.type) });
+        mk.__loc = loc;
+        mk.on("click", () => App.Modal.open(loc));
+        loc.__marker = mk;
+
+        allMarkers.push(mk);
+
+        addToMapList(markersByTitle, loc.title, mk);
+        (loc.collections || []).forEach((c) => addToMapList(markersByCollection, c, mk));
+        addToMapList(markersByType, loc.type, mk);
       });
+
+      // Initial render
+      App.Map.rebuildCluster(allMarkers);
+      App.State.clearFilter();
+
+      // Fuse indexes
+      const fuseLocations = new Fuse(ALL, {
+        threshold: 0.35,
+        keys: [
+          { name: "title", weight: 3 },
+          { name: "collections", weight: 2.3 },
+          { name: "series", weight: 1.8 },
+          { name: "aliases", weight: 1.8 },
+          { name: "place", weight: 1.7 },
+          { name: "country", weight: 1.2 },
+          { name: "type", weight: 1.1 },
+          { name: "keywords", weight: 1.4 },
+          { name: "description", weight: 0.8 }
+        ]
+      });
+
+      const groups = [];
+
+      markersByTitle.forEach((arr, title) => {
+        groups.push({ kind: "Title", label: title, count: arr.length });
+        groupsIndex.set(`Title::${title}`, arr);
+      });
+
+      markersByCollection.forEach((arr, col) => {
+        groups.push({ kind: "Collection", label: col, count: arr.length });
+        groupsIndex.set(`Collection::${col}`, arr);
+      });
+
+      markersByType.forEach((arr, type) => {
+        groups.push({ kind: "Type", label: type, count: arr.length });
+        groupsIndex.set(`Type::${type}`, arr);
+      });
+
+      const fuseGroups = new Fuse(groups, {
+        threshold: 0.35,
+        keys: ["label", "kind"]
+      });
+
+      App.Search.setData({
+        fuseLoc: fuseLocations,
+        fuseGrp: fuseGroups,
+        groupsIdx: groupsIndex,
+        allMk: allMarkers
+      });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load data from Google Sheets. Check console for details.");
+    }
   }
 
   return { init };
