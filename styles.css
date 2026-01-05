@@ -12,7 +12,7 @@ html, body {
   height: 100%;
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  overflow: hidden; /* avoids sideways “wiggle” on mobile focus */
+  overflow: hidden;
 }
 
 /* Body becomes a column: topbar then map */
@@ -23,7 +23,7 @@ body {
 }
 
 /* ======================
-   TOP BAR (in normal flow)
+   TOP BAR
 ====================== */
 
 .topbar {
@@ -47,9 +47,7 @@ body {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
-
-  /* iOS Safari will zoom inputs if font-size < 16px */
-  font-size: 16px;
+  font-size: 16px; /* prevents iOS zoom */
 }
 
 .topbar-actions {
@@ -77,7 +75,6 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Mobile: stack buttons under input */
 @media (max-width: 520px) {
   .topbar-inner {
     flex-direction: column;
@@ -103,7 +100,7 @@ body {
 }
 
 /* ======================
-   MAP (fills remaining space)
+   MAP
 ====================== */
 
 #map {
@@ -166,15 +163,8 @@ body {
   display: block;
 }
 
-/* results modal above everything except location modal */
-#resultsModal {
-  z-index: 4500;
-}
-
-/* your kept z-index for the location modal */
-.location-modal {
-  z-index: 5000;
-}
+#resultsModal { z-index: 4500; }
+.location-modal { z-index: 5000; }
 
 .modal-card {
   background: #fff;
@@ -191,8 +181,57 @@ body {
   }
 }
 
-.close {
-  float: right;
+.close { float: right; }
+
+/* Location modal tweaks */
+.modal-card-location {
+  padding-top: 18px;
+}
+
+.loc-title {
+  margin: 6px 0 10px;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+@media (max-width: 520px) {
+  .loc-title {
+    font-size: 22px;
+  }
+}
+
+.loc-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.loc-info-item {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.loc-info-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+
+.loc-info-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: #111827;
+}
+
+.loc-desc {
+  margin: 0 0 10px;
+  font-size: 14px;
+  opacity: 0.85;
 }
 
 /* ======================
@@ -226,21 +265,8 @@ body {
 }
 
 /* ======================
-   MODAL META CHIPS
+   CHIPS
 ====================== */
-
-.modal-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 13px;
-}
-
-.meta-text {
-  opacity: 0.85;
-}
 
 .chip {
   border: 1px solid var(--border);
@@ -256,6 +282,28 @@ body {
   background: #fafafa;
 }
 
+.loc-tags-wrap {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.loc-tags-label {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.loc-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.loc-tags-empty {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
 /* ======================
    GALLERY
 ====================== */
@@ -267,14 +315,14 @@ body {
   margin-top: 12px;
 }
 
-/* Default: multiple images */
 .gallery img {
   max-width: 300px;
   height: auto;
   border-radius: 12px;
 }
 
-/* Single image: let it breathe */
+/* Single image: full width */
 .gallery.single img {
   max-width: 100%;
+  width: 100%;
 }
