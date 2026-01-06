@@ -2,6 +2,7 @@ window.App = window.App || {};
 
 App.Modal = (function () {
   let modal, mTitle, mInfo, mDesc, mGallery, mTags, closeBtn;
+  let currentLocId = "";
 
   function escapeHtml(s) {
     return (s || "").toString()
@@ -47,7 +48,6 @@ App.Modal = (function () {
     closeBtn.onclick = close;
     modal.onclick = (e) => { if (e.target === modal) close(); };
 
-    // Clicking chips applies filter AND closes modal
     mTags.addEventListener("click", (e) => {
       const el = e.target.closest("[data-kind][data-label]");
       if (!el) return;
@@ -63,7 +63,9 @@ App.Modal = (function () {
     });
   }
 
-  function open(loc) {
+  function open(loc, opts = {}) {
+    currentLocId = loc?.id || "";
+
     mTitle.textContent = loc.title || "";
 
     const placeBits = [];
@@ -92,7 +94,6 @@ App.Modal = (function () {
     mDesc.textContent = loc.description || "";
     mDesc.style.display = mDesc.textContent ? "block" : "none";
 
-    // Gallery
     mGallery.innerHTML = "";
     mGallery.classList.remove("single");
     const imgs = Array.isArray(loc.images) ? loc.images : [];
@@ -111,29 +112,28 @@ App.Modal = (function () {
       });
     }
 
-    // Tags (below image)
     const chips = [];
-
-    // Always include the exact Title so users can see all locations for it
     if (loc.title) chips.push(chipHtml("Title", loc.title));
-
-    // ✅ Series now uses its own kind so filtering works
     if (loc.series && loc.series !== loc.title) chips.push(chipHtml("Series", loc.series));
-
     if (loc.type) chips.push(chipHtml("Type", loc.type));
-
-    const cols = Array.isArray(loc.collections) ? loc.collections : [];
-    cols.forEach((c) => { if (c) chips.push(chipHtml("Collection", c)); });
+    (Array.isArray(loc.collections) ? loc.collections : []).forEach((c) => { if (c) chips.push(chipHtml("Collection", c)); });
 
     mTags.innerHTML = chips.length ? chips.join("") : `<span class="loc-tags-empty">No tags yet.</span>`;
 
     modal.classList.add("open");
     modal.setAttribute("aria-hidden", "false");
+
+    if (!opts.skipUrl) App.Router.onLocationOpened(currentLocId);
   }
 
   function close() {
     modal.classList.remove("open");
     modal.setAttribute("aria-hidden", "true");
+
+    if (currentLocId) {
+      currentLocId = "";
+      App.Router.onLocationClosed();
+    }
   }
 
   return { init, open, close, escapeHtml };
