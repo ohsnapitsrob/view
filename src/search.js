@@ -18,7 +18,8 @@ App.Search = (function () {
       }
     });
 
-    setActiveTab("groups");
+    // ✅ IMPORTANT: set default tab without touching URL
+    setActiveTab("groups", { skipUrl: true });
   }
 
   function setData({ fuseLoc, fuseGrp, groupsIdx, allMk }) {
@@ -48,7 +49,7 @@ App.Search = (function () {
 
     App.State.clearFilter();
     App.Map.rebuildCluster(allMarkers);
-    App.UI.closeResultsModal({ skipUrl: true }); // reset should close results
+    App.UI.closeResultsModal({ skipUrl: true }); // reset closes results
     App.Modal.close?.();
 
     if (!opts.skipUrl) App.Router.onReset();
@@ -58,7 +59,7 @@ App.Search = (function () {
     const input = App.UI.getSearchInput();
 
     if (!opts.keepSearch) input.value = "";
-    App.UI.closeResultsModal({ skipUrl: opts.skipUrl }); // keep URL in sync if closing via user action
+    App.UI.closeResultsModal({ skipUrl: opts.skipUrl });
 
     const key = `${kind}::${label}`;
     const markers = (groupsIndex && groupsIndex.get(key)) ? groupsIndex.get(key) : [];
@@ -70,7 +71,6 @@ App.Search = (function () {
   }
 
   function filterGroupAndListPlaces(kind, label, opts = {}) {
-    // Apply the filter
     applyGroupFilter(kind, label, { ...opts, keepSearch: true });
 
     setActiveTab("places", opts);
@@ -89,6 +89,7 @@ App.Search = (function () {
 
   function runSearch(raw, opts = {}) {
     const query = (raw || "").toString().trim();
+
     if (!query) {
       App.UI.closeResultsModal({ skipUrl: opts.skipUrl });
       return;
