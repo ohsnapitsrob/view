@@ -2,8 +2,10 @@ window.App = window.App || {};
 
 App.Router = (function () {
   let locationsById = new Map();
-  let dataReady = false;
-  let uiReady = false;
+
+  let dataReady = false;   // locations indexed
+  let uiReady = false;     // UI + Search init complete
+  let searchReady = false; // Fuse indexes have been set via Search.setData()
 
   let applyingFromUrl = false;
   let pendingState = null;
@@ -15,13 +17,10 @@ App.Router = (function () {
 
   function init() {
     window.addEventListener("popstate", () => {
-      // Back/forward should restore state, but only once ready
-      const st = readUrlState();
-      pendingState = st;
+      pendingState = readUrlState();
       tryApplyPending();
     });
 
-    // Capture initial state; apply once ready
     pendingState = readUrlState();
   }
 
@@ -30,12 +29,17 @@ App.Router = (function () {
     tryApplyPending();
   }
 
+  // ✅ NEW: called once Search.setData() has run
+  function setSearchReady() {
+    searchReady = true;
+    tryApplyPending();
+  }
+
   function setMap(leafletMap) {
     map = leafletMap;
     mapReady = !!map;
 
     if (mapReady) {
-      // Listen for map changes -> URL
       map.on("moveend zoomend", () => {
         if (applyingFromUrl) return;
 
@@ -57,7 +61,6 @@ App.Router = (function () {
       });
     }
 
-    // Map being ready might allow applying pending state (if UI+Data are ready too)
     tryApplyPending();
   }
 
@@ -72,8 +75,8 @@ App.Router = (function () {
   }
 
   function tryApplyPending() {
-    // We must not call Search/UI until both exist
-    if (!uiReady || !dataReady) return;
+    // ✅ only apply URL state once UI + data + fuse are all ready
+    if (!uiReady || !dataReady || !searchReady) return;
     if (!pendingState) return;
 
     const st = pendingState;
@@ -142,7 +145,7 @@ App.Router = (function () {
     applyingFromUrl = true;
 
     try {
-      // 0) Map view first (safe even if UI stuff is delayed)
+      // 0) Map view first
       if (mapReady && Number.isFinite(state.mlat) && Number.isFinite(state.mlng) && Number.isFinite(state.mz)) {
         map.setView([state.mlat, state.mlng], state.mz, { animate: false });
         lastMapSig = `${round(state.mlat, 5)},${round(state.mlng, 5)},${Math.round(state.mz)}`;
@@ -162,13 +165,13 @@ App.Router = (function () {
         const input = App.UI.getSearchInput();
         input.value = state.q;
 
-        // ✅ Crucial: run search and render results immediately
+        // ✅ now safe because fuse is ready
         App.Search.runSearch(state.q, { skipUrl: true, openResultsModal: state.rm });
       } else {
         App.Search.resetAll({ skipUrl: true });
       }
 
-      // 3) Results modal state if needed
+      // 3) Results modal state (if no search just opened it)
       if (!state.q && !(state.fk && state.fl && state.tab === "places")) {
         if (state.rm) App.UI.openResultsModal({ skipUrl: true });
         else App.UI.closeResultsModal({ skipUrl: true });
@@ -293,6 +296,7 @@ App.Router = (function () {
   return {
     init,
     setUiReady,
+    setSearchReady, // ✅
     setMap,
     setLocationsIndex,
     onSearchChanged,
