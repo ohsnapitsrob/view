@@ -5,7 +5,10 @@ window.App = window.App || {};
   try {
     App.State.init();
     App.Router.init();
+
     App.Map.init();
+    App.Router.setMap(App.Map.getMap()); // ✅ NEW: enable URL <-> map view sync
+
     App.Modal.init();
     App.UI.init();
     App.Search.init();
