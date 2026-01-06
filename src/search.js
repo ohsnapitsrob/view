@@ -4,7 +4,7 @@ App.Search = (function () {
   let activeTab = "groups";
   let fuseLocations = null;
   let fuseGroups = null;
-  let groupsIndex = null; // Map key -> Marker[]
+  let groupsIndex = null;
   let allMarkers = [];
 
   function init() {
@@ -28,33 +28,38 @@ App.Search = (function () {
     allMarkers = allMk;
   }
 
-  function setActiveTab(which) {
+  // Added options param so Router can call without loops
+  function setActiveTab(which, opts = {}) {
     activeTab = (which === "places") ? "places" : "groups";
     App.UI.setActiveTabUI(activeTab);
 
+    if (!opts.skipUrl) {
+      const q = (App.UI.getSearchInput().value || "").trim();
+      App.Router.onSearchChanged({ q, tab: activeTab });
+    }
+
     const input = App.UI.getSearchInput();
     const q = (input.value || "").trim();
-    if (q) runSearch(q);
+    if (q) runSearch(q, opts);
   }
 
-  function showAll() {
+  function resetAll(opts = {}) {
     const input = App.UI.getSearchInput();
     input.value = "";
+
     App.State.clearFilter();
     App.Map.rebuildCluster(allMarkers);
     App.UI.closeResultsModal();
+    App.Modal.close?.(); // safe if exists
+
+    if (!opts.skipUrl) App.Router.onReset();
   }
 
-  // Reset filter only (keeps whatever’s in the search box)
-  function resetOnly() {
-    App.State.clearFilter();
-    App.Map.rebuildCluster(allMarkers);
-    App.UI.closeResultsModal();
-  }
-
-  function applyGroupFilter(kind, label) {
+  // Apply a group filter (called by modal chips + group results)
+  function applyGroupFilter(kind, label, opts = {}) {
     const input = App.UI.getSearchInput();
-    input.value = ""; // per your requirement: reset search then apply the group filter
+
+    if (!opts.keepSearch) input.value = "";
     App.UI.closeResultsModal();
 
     const key = `${kind}::${label}`;
@@ -62,22 +67,22 @@ App.Search = (function () {
 
     App.State.setFilter({ kind, label });
     App.Map.rebuildCluster(markers);
+
+    if (!opts.skipUrl) App.Router.onFilterChanged({ kind, label });
   }
 
   function filterGroupAndListPlaces(kind, label) {
+    applyGroupFilter(kind, label);
+    setActiveTab("places");
+
     const key = `${kind}::${label}`;
     const markers = (groupsIndex && groupsIndex.get(key)) ? groupsIndex.get(key) : [];
 
-    App.State.setFilter({ kind, label });
-    App.Map.rebuildCluster(markers);
-
-    // switch to places view & list places
-    setActiveTab("places");
     App.UI.openResultsModal();
     App.UI.renderPlacesListForGroup(kind, label, markers);
   }
 
-  function runSearch(raw) {
+  function runSearch(raw, opts = {}) {
     const query = (raw || "").toString().trim();
     if (!query) {
       App.UI.closeResultsModal();
@@ -89,21 +94,19 @@ App.Search = (function () {
     if (activeTab === "groups") {
       const hits = fuseGroups ? fuseGroups.search(query).slice(0, 30).map(r => r.item) : [];
       App.UI.renderGroupResults(hits);
+
+      if (!opts.skipUrl) App.Router.onSearchChanged({ q: query, tab: activeTab });
       return;
     }
 
     const locHits = fuseLocations ? fuseLocations.search(query).slice(0, 50).map(r => r.item) : [];
-
-    // filter map to hits (cap for perf)
-    const hitMarkers = locHits
-      .slice(0, 2000)
-      .map(loc => loc.__marker)
-      .filter(Boolean);
+    const hitMarkers = locHits.slice(0, 2000).map(loc => loc.__marker).filter(Boolean);
 
     App.State.setFilter({ kind: "Search", label: query });
     App.Map.rebuildCluster(hitMarkers);
-
     App.UI.renderPlaceResults(locHits);
+
+    if (!opts.skipUrl) App.Router.onSearchChanged({ q: query, tab: activeTab });
   }
 
   return {
@@ -111,8 +114,7 @@ App.Search = (function () {
     setData,
     setActiveTab,
     runSearch,
-    showAll,
-    resetOnly,
+    resetAll,
     applyGroupFilter,
     filterGroupAndListPlaces
   };
