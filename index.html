@@ -13,7 +13,7 @@
 </head>
 <body>
 
-  <!-- TOP BAR (not overlaying the map) -->
+  <!-- TOP BAR -->
   <header class="topbar">
     <div class="topbar-inner">
       <input
@@ -24,7 +24,6 @@
       />
 
       <div class="topbar-actions">
-        <button id="showAll" class="btn">Show all</button>
         <button id="resetFilter" class="btn btn-secondary" style="display:none;">Reset</button>
       </div>
     </div>
@@ -52,23 +51,16 @@
     </div>
   </div>
 
-  <!-- LOCATION MODAL (updated layout) -->
+  <!-- LOCATION MODAL -->
   <div id="modal" class="modal location-modal" aria-hidden="true">
     <div class="modal-card modal-card-location">
       <button id="closeBtn" class="btn close">Close</button>
 
       <h2 id="mTitle" class="loc-title"></h2>
-
-      <!-- NEW: location + taken date row -->
       <div id="mInfo" class="loc-info"></div>
-
-      <!-- Optional description (kept) -->
       <p id="mDesc" class="loc-desc"></p>
-
-      <!-- Images -->
       <div id="mGallery" class="gallery"></div>
 
-      <!-- NEW: chips below image -->
       <div class="loc-tags-wrap">
         <div class="loc-tags-label">See more like this:</div>
         <div id="mTags" class="loc-tags"></div>
@@ -77,20 +69,20 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://unpkg.com/fuse.js@7.0.0/dist/fuse.min.js"></script>
 
-  <!-- Config + app modules (order matters) -->
   <script src="config.js"></script>
 
   <script src="src/state.js"></script>
+  <script src="src/router.js"></script>
   <script src="src/map.js"></script>
   <script src="src/modal.js"></script>
   <script src="src/ui.js"></script>
   <script src="src/search.js"></script>
   <script src="src/data.js"></script>
 
-  <!-- Boot -->
   <script src="app.js"></script>
 </body>
 </html>
