@@ -1,204 +1,311 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>All Titles</title>
+(function () {
+  const listEl = document.getElementById("browseList");
+  const searchEl = document.getElementById("browseSearch");
+  const sortEl = document.getElementById("browseSort");
+  const countEl = document.getElementById("browseCount");
 
-  <link rel="stylesheet" href="../styles.css" />
+  let ALL_ENTRIES = [];
 
-  <style>
-    html, body {
-      overflow: auto;
-      height: auto;
-      min-height: 100%;
-      background: #fff;
-    }
+  function norm(s) {
+    return (s || "").toString().trim();
+  }
 
-    body {
-      display: block;
-    }
+  function splitPipe(s) {
+    const t = norm(s);
+    if (!t) return [];
+    return t.split("|").map(x => norm(x)).filter(Boolean);
+  }
 
-    .browse-wrap {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 24px 16px 48px;
-    }
+  function normalizeType(t) {
+    const x = norm(t).toLowerCase();
+    if (!x) return "Misc";
+    if (x === "film" || x === "movie" || x === "movies") return "Film";
+    if (x === "tv" || x === "tv show" || x === "tv shows" || x === "series") return "TV";
+    if (x === "music video" || x === "music videos" || x === "mv") return "Music Video";
+    if (x === "game" || x === "games" || x === "video game" || x === "video games") return "Video Game";
+    if (x === "misc" || x === "other") return "Misc";
+    return norm(t);
+  }
 
-    .browse-head {
-      display: grid;
-      gap: 10px;
-      margin-bottom: 18px;
-    }
+  function typeColor(type) {
+    const colors = {
+      Film: "#2563eb",
+      TV: "#16a34a",
+      "Music Video": "#db2777",
+      Misc: "#6b7280",
+      "Video Game": "#FFA500"
+    };
+    return colors[type] || colors.Misc;
+  }
 
-    .browse-head h1 {
-      margin: 0;
-      font-size: 32px;
-      line-height: 1.1;
-    }
+  function displayType(type) {
+    if (type === "Film") return "Movie";
+    if (type === "TV") return "TV Show";
+    return type;
+  }
 
-    .browse-tools {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 180px 42px;
-      gap: 10px;
-      align-items: center;
-      margin-top: 8px;
-    }
+  function coerceNumber(x) {
+    const n = Number((x ?? "").toString().trim());
+    return Number.isFinite(n) ? n : null;
+  }
 
-    .browse-search {
-      min-width: 0;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      font-size: 16px;
-    }
+  function parseCSV(text) {
+    const rows = [];
+    let row = [];
+    let cur = "";
+    let inQuotes = false;
 
-    .browse-sort {
-      min-width: 0;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      font-size: 16px;
-      background: #fff;
-    }
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      const next = text[i + 1];
 
-    .browse-map-btn {
-      justify-self: end;
-    }
-
-    .browse-count {
-      font-size: 13px;
-      opacity: 0.75;
-      width: 100%;
-    }
-
-    .browse-list {
-      display: grid;
-      gap: 8px;
-      margin-top: 18px;
-    }
-
-    .browse-row {
-      display: grid;
-      grid-template-columns: 8px minmax(0, 1fr) 140px 140px;
-      gap: 12px;
-      align-items: center;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 0 14px 0 0;
-      text-decoration: none;
-      color: inherit;
-      background: #fff;
-      overflow: hidden;
-    }
-
-    .browse-row:hover {
-      background: #fafafa;
-    }
-
-    .browse-marker {
-      align-self: stretch;
-      width: 8px;
-      min-height: 100%;
-    }
-
-    .browse-main {
-      padding: 12px 0 12px 0;
-      min-width: 0;
-    }
-
-    .browse-title {
-      font-weight: 650;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .browse-type,
-    .browse-scenes {
-      font-size: 13px;
-      opacity: 0.8;
-      white-space: nowrap;
-      text-align: right;
-    }
-
-    .browse-empty {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px;
-      font-size: 14px;
-      opacity: 0.75;
-    }
-
-    @media (max-width: 700px) {
-      .browse-row {
-        grid-template-columns: 8px 1fr;
-        gap: 8px 12px;
-        padding-right: 12px;
+      if (c === '"' && inQuotes && next === '"') {
+        cur += '"';
+        i++;
+        continue;
       }
 
-      .browse-marker {
-        grid-row: 1 / span 3;
+      if (c === '"') {
+        inQuotes = !inQuotes;
+        continue;
       }
 
-      .browse-main {
-        padding-bottom: 0;
+      if (c === "," && !inQuotes) {
+        row.push(cur);
+        cur = "";
+        continue;
       }
 
-      .browse-type,
-      .browse-scenes {
-        text-align: left;
-        padding-bottom: 8px;
+      if ((c === "\n" || c === "\r") && !inQuotes) {
+        if (c === "\r" && next === "\n") i++;
+        row.push(cur);
+        cur = "";
+        if (row.length > 1 || (row.length === 1 && row[0] !== "")) rows.push(row);
+        row = [];
+        continue;
       }
 
-      .browse-head h1 {
-        font-size: 26px;
-      }
-
-      .browse-tools {
-        grid-template-columns: 1fr;
-      }
-
-      .browse-sort,
-      .browse-map-btn {
-        width: 100%;
-      }
-
-      .browse-map-btn {
-        justify-self: stretch;
-      }
+      cur += c;
     }
-  </style>
-</head>
-<body>
-  <div class="browse-wrap">
-    <div class="browse-head">
-      <h1>All titles</h1>
 
-      <div class="browse-tools">
-        <input id="browseSearch" class="browse-search" type="search" placeholder="Filter titles…" autocomplete="off" />
+    row.push(cur);
+    if (row.length > 1 || (row.length === 1 && row[0] !== "")) rows.push(row);
 
-        <select id="browseSort" class="browse-sort" aria-label="Sort titles">
-          <option value="most">Most scenes</option>
-          <option value="az">A–Z</option>
-          <option value="za">Z–A</option>
-        </select>
+    return rows;
+  }
 
-        <a href="../" class="icon-btn browse-map-btn" aria-label="Back to map" title="Back to map">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M15 5l-1.4 2H9.9L8.5 5H6.4A2.4 2.4 0 0 0 4 7.4v9.2A2.4 2.4 0 0 0 6.4 19h11.2A2.4 2.4 0 0 0 20 16.6V7.4A2.4 2.4 0 0 0 17.6 5H15zm-3 3.5A4.5 4.5 0 1 1 7.5 13A4.5 4.5 0 0 1 12 8.5zm0 2A2.5 2.5 0 1 0 14.5 13A2.5 2.5 0 0 0 12 10.5z"></path>
-          </svg>
-        </a>
+  function rowsToObjects(rows) {
+    if (!rows.length) return [];
+    const header = rows[0].map(h => norm(h));
+    const out = [];
 
-        <div id="browseCount" class="browse-count"></div>
-      </div>
-    </div>
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || r.every(cell => norm(cell) === "")) continue;
 
-    <div id="browseList" class="browse-list"></div>
-  </div>
+      const obj = {};
+      for (let j = 0; j < header.length; j++) {
+        obj[header[j]] = (r[j] ?? "");
+      }
+      out.push(obj);
+    }
 
-  <script src="../config.js"></script>
-  <script src="./browse.js"></script>
-</body>
-</html>
+    return out;
+  }
+
+  async function fetchSheetCSV(url) {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Failed to fetch CSV: ${url}`);
+    return res.text();
+  }
+
+  function escapeHtml(s) {
+    return (s || "").toString()
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function sceneLabel(n) {
+    return `${n} scene${n === 1 ? "" : "s"}`;
+  }
+
+  function summaryLabel(titleCount, sceneCount) {
+    return `${titleCount.toLocaleString()} title${titleCount === 1 ? "" : "s"}, ${sceneCount.toLocaleString()} scene${sceneCount === 1 ? "" : "s"}`;
+  }
+
+  function buildMapUrl(title) {
+    const params = new URLSearchParams();
+    params.set("fk", "Title");
+    params.set("fl", title);
+    return `../?${params.toString()}`;
+  }
+
+  function postProcessRow(row, fallbackType) {
+    const title = norm(row.title);
+    const type = normalizeType(row.type || fallbackType);
+    const lat = coerceNumber(row.lat);
+    const lng = coerceNumber(row.lng);
+
+    if (!title || typeof lat !== "number" || typeof lng !== "number") return null;
+
+    return {
+      id: norm(row.id),
+      title,
+      type,
+      place: norm(row.place),
+      country: norm(row.country),
+      collections: splitPipe(row.collections)
+    };
+  }
+
+  function compareTitleAsc(a, b) {
+    return a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+  }
+
+  function compareTypeAsc(a, b) {
+    return a.type.localeCompare(b.type, undefined, { sensitivity: "base" });
+  }
+
+  function sortMost(a, b) {
+    if (b.count !== a.count) return b.count - a.count;
+    const titleCmp = compareTitleAsc(a, b);
+    if (titleCmp !== 0) return titleCmp;
+    return compareTypeAsc(a, b);
+  }
+
+  function sortAZ(a, b) {
+    const titleCmp = compareTitleAsc(a, b);
+    if (titleCmp !== 0) return titleCmp;
+    return compareTypeAsc(a, b);
+  }
+
+  function sortZA(a, b) {
+    const titleCmp = compareTitleAsc(b, a);
+    if (titleCmp !== 0) return titleCmp;
+    return compareTypeAsc(a, b);
+  }
+
+  function getSorted(entries, sortMode) {
+    const copy = [...entries];
+
+    if (sortMode === "az") return copy.sort(sortAZ);
+    if (sortMode === "za") return copy.sort(sortZA);
+    return copy.sort(sortMost);
+  }
+
+  function render(entries) {
+    listEl.innerHTML = "";
+
+    const titleCount = entries.length;
+    const sceneCount = entries.reduce((sum, entry) => sum + entry.count, 0);
+    countEl.textContent = summaryLabel(titleCount, sceneCount);
+
+    if (!entries.length) {
+      listEl.innerHTML = `<div class="browse-empty">No matches.</div>`;
+      return;
+    }
+
+    entries.forEach((entry) => {
+      const a = document.createElement("a");
+      a.className = "browse-row";
+      a.href = buildMapUrl(entry.title);
+
+      a.innerHTML = `
+        <div class="browse-marker" style="background:${escapeHtml(typeColor(entry.type))};"></div>
+        <div class="browse-main">
+          <div class="browse-title">${escapeHtml(entry.title)}</div>
+        </div>
+        <div class="browse-type">${escapeHtml(displayType(entry.type))}</div>
+        <div class="browse-scenes">${sceneLabel(entry.count)}</div>
+      `;
+
+      listEl.appendChild(a);
+    });
+  }
+
+  function applyControls() {
+    const q = norm(searchEl.value).toLowerCase();
+    const sortMode = sortEl.value || "most";
+
+    let filtered = ALL_ENTRIES;
+
+    if (q) {
+      filtered = filtered.filter((entry) => {
+        return (
+          entry.title.toLowerCase().includes(q) ||
+          displayType(entry.type).toLowerCase().includes(q)
+        );
+      });
+    }
+
+    render(getSorted(filtered, sortMode));
+  }
+
+  async function loadAll() {
+    const cfg = window.APP_CONFIG || {};
+    const sheets = cfg.SHEETS || {};
+
+    const sources = [
+      ["Film", sheets.movies],
+      ["TV", sheets.tv],
+      ["Music Video", sheets.music_videos],
+      ["Video Game", sheets.games],
+      ["Misc", sheets.misc]
+    ].filter(([, url]) => !!url);
+
+    if (!sources.length) {
+      throw new Error("No sheet URLs configured.");
+    }
+
+    const texts = await Promise.all(
+      sources.map(([, url]) => fetchSheetCSV(url))
+    );
+
+    const rows = [];
+    for (let i = 0; i < sources.length; i++) {
+      const [fallbackType] = sources[i];
+      const parsed = rowsToObjects(parseCSV(texts[i]));
+      parsed.forEach((r) => {
+        const loc = postProcessRow(r, fallbackType);
+        if (loc) rows.push(loc);
+      });
+    }
+
+    const grouped = new Map();
+
+    rows.forEach((loc) => {
+      const key = `${loc.title}|||${loc.type}`;
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          title: loc.title,
+          type: loc.type,
+          count: 0
+        });
+      }
+      grouped.get(key).count += 1;
+    });
+
+    return Array.from(grouped.values());
+  }
+
+  async function init() {
+    try {
+      listEl.innerHTML = `<div class="browse-empty">Loading…</div>`;
+      ALL_ENTRIES = await loadAll();
+
+      searchEl.addEventListener("input", applyControls);
+      sortEl.addEventListener("change", applyControls);
+
+      applyControls();
+    } catch (err) {
+      console.error(err);
+      listEl.innerHTML = `<div class="browse-empty">Could not load browse index.</div>`;
+      countEl.textContent = "";
+    }
+  }
+
+  init();
+})();
