@@ -60,9 +60,19 @@
       font-size: 16px;
     }
 
+    .browse-sort {
+      min-width: 180px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 16px;
+      background: #fff;
+    }
+
     .browse-count {
       font-size: 13px;
       opacity: 0.75;
+      width: 100%;
     }
 
     .browse-list {
@@ -73,19 +83,31 @@
 
     .browse-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 140px 140px;
+      grid-template-columns: 8px minmax(0, 1fr) 140px 140px;
       gap: 12px;
       align-items: center;
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 12px 14px;
+      padding: 0 14px 0 0;
       text-decoration: none;
       color: inherit;
       background: #fff;
+      overflow: hidden;
     }
 
     .browse-row:hover {
       background: #fafafa;
+    }
+
+    .browse-marker {
+      align-self: stretch;
+      width: 8px;
+      min-height: 100%;
+    }
+
+    .browse-main {
+      padding: 12px 0 12px 0;
+      min-width: 0;
     }
 
     .browse-title {
@@ -122,17 +144,31 @@
 
     @media (max-width: 700px) {
       .browse-row {
-        grid-template-columns: 1fr;
-        gap: 4px;
+        grid-template-columns: 8px 1fr;
+        gap: 8px 12px;
+        padding-right: 12px;
+      }
+
+      .browse-marker {
+        grid-row: 1 / span 3;
+      }
+
+      .browse-main {
+        padding-bottom: 0;
       }
 
       .browse-type,
       .browse-scenes {
         text-align: left;
+        padding-bottom: 8px;
       }
 
       .browse-head h1 {
         font-size: 26px;
+      }
+
+      .browse-sort {
+        width: 100%;
       }
     }
   </style>
@@ -145,10 +181,17 @@
 
     <div class="browse-head">
       <h1>Browse titles</h1>
-      <p class="browse-sub">Alphabetical index of all titles in the database.</p>
+      <p class="browse-sub">Index of all titles in the database.</p>
 
       <div class="browse-tools">
         <input id="browseSearch" class="browse-search" type="search" placeholder="Filter titles…" autocomplete="off" />
+
+        <select id="browseSort" class="browse-sort" aria-label="Sort titles">
+          <option value="most">Most locations</option>
+          <option value="az">A–Z</option>
+          <option value="za">Z–A</option>
+        </select>
+
         <div id="browseCount" class="browse-count"></div>
       </div>
     </div>
