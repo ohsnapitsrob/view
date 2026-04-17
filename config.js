@@ -9,6 +9,7 @@ window.APP_CONFIG = {
     movies: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRdUpTQ0w232gQ8tP2fEaGvdSe_q5SShKEWS7MOuku4VcCuTpg-rsTrTJ1ztpOyD6FMV98iZTGdzKt1/pub?gid=0&single=true&output=csv",
     tv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRdUpTQ0w232gQ8tP2fEaGvdSe_q5SShKEWS7MOuku4VcCuTpg-rsTrTJ1ztpOyD6FMV98iZTGdzKt1/pub?gid=1386447371&single=true&output=csv",
     music_videos: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRdUpTQ0w232gQ8tP2fEaGvdSe_q5SShKEWS7MOuku4VcCuTpg-rsTrTJ1ztpOyD6FMV98iZTGdzKt1/pub?gid=226124969&single=true&output=csv",
-    misc: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRdUpTQ0w232gQ8tP2fEaGvdSe_q5SShKEWS7MOuku4VcCuTpg-rsTrTJ1ztpOyD6FMV98iZTGdzKt1/pub?gid=82045520&single=true&output=csv"
+    misc: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRdUpTQ0w232gQ8tP2fEaGvdSe_q5SShKEWS7MOuku4VcCuTpg-rsTrTJ1ztpOyD6FMV98iZTGdzKt1/pub?gid=82045520&single=true&output=csv",
+    games: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRdUpTQ0w232gQ8tP2fEaGvdSe_q5SShKEWS7MOuku4VcCuTpg-rsTrTJ1ztpOyD6FMV98iZTGdzKt1/pub?gid=1442332259&single=true&output=csv" 
   }
 };
