@@ -143,6 +143,15 @@
     return `../?${params.toString()}`;
   }
 
+  function parseVisitedDate(value) {
+    const raw = norm(value);
+    if (!raw) return null;
+
+    const cleaned = raw.replace(/(\d{1,2})(st|nd|rd|th)/gi, "$1");
+    const ts = Date.parse(cleaned);
+    return Number.isFinite(ts) ? ts : null;
+  }
+
   function postProcessRow(row, fallbackType) {
     const title = norm(row.title);
     const type = normalizeType(row.type || fallbackType);
@@ -157,7 +166,8 @@
       type,
       place: norm(row.place),
       country: norm(row.country),
-      collections: splitPipe(row.collections)
+      collections: splitPipe(row.collections),
+      visitedTs: parseVisitedDate(row["date-formatted"] || row["raw-date"] || row["visited"] || row["visit-date"])
     };
   }
 
@@ -188,11 +198,45 @@
     return compareTypeAsc(a, b);
   }
 
+  function sortVisitedLatest(a, b) {
+    const aHas = Number.isFinite(a.latestVisitedTs);
+    const bHas = Number.isFinite(b.latestVisitedTs);
+
+    if (aHas && bHas && b.latestVisitedTs !== a.latestVisitedTs) {
+      return b.latestVisitedTs - a.latestVisitedTs;
+    }
+
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+
+    const titleCmp = compareTitleAsc(a, b);
+    if (titleCmp !== 0) return titleCmp;
+    return compareTypeAsc(a, b);
+  }
+
+  function sortVisitedOldest(a, b) {
+    const aHas = Number.isFinite(a.latestVisitedTs);
+    const bHas = Number.isFinite(b.latestVisitedTs);
+
+    if (aHas && bHas && a.latestVisitedTs !== b.latestVisitedTs) {
+      return a.latestVisitedTs - b.latestVisitedTs;
+    }
+
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+
+    const titleCmp = compareTitleAsc(a, b);
+    if (titleCmp !== 0) return titleCmp;
+    return compareTypeAsc(a, b);
+  }
+
   function getSorted(entries, sortMode) {
     const copy = [...entries];
 
     if (sortMode === "az") return copy.sort(sortAZ);
     if (sortMode === "za") return copy.sort(sortZA);
+    if (sortMode === "visited-latest") return copy.sort(sortVisitedLatest);
+    if (sortMode === "visited-oldest") return copy.sort(sortVisitedOldest);
     return copy.sort(sortMost);
   }
 
@@ -282,10 +326,19 @@
         grouped.set(key, {
           title: loc.title,
           type: loc.type,
-          count: 0
+          count: 0,
+          latestVisitedTs: null
         });
       }
-      grouped.get(key).count += 1;
+
+      const entry = grouped.get(key);
+      entry.count += 1;
+
+      if (Number.isFinite(loc.visitedTs)) {
+        if (!Number.isFinite(entry.latestVisitedTs) || loc.visitedTs > entry.latestVisitedTs) {
+          entry.latestVisitedTs = loc.visitedTs;
+        }
+      }
     });
 
     return Array.from(grouped.values());
