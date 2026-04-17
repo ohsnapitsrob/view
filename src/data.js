@@ -79,6 +79,7 @@ App.Data = (function () {
     if (x === "film" || x === "movie" || x === "movies") return "Film";
     if (x === "tv" || x === "tv show" || x === "tv shows" || x === "series") return "TV";
     if (x === "music video" || x === "music videos" || x === "mv") return "Music Video";
+    if (x === "video games" || x === "video game" || x === "game" || x === "games") return "Video Game";
     if (x === "misc" || x === "other") return "Misc";
     return norm(t);
   }
@@ -96,6 +97,7 @@ App.Data = (function () {
     if (t === "Film") return "F";
     if (t === "TV") return "TV";
     if (t === "Music Video") return "MV";
+    if (t === "Video Game") return "G";
     return "?";
   }
 
@@ -198,7 +200,8 @@ App.Data = (function () {
           ["Film", sheets.movies],
           ["TV", sheets.tv],
           ["Music Video", sheets.music_videos],
-          ["Misc", sheets.misc]
+          ["Misc", sheets.misc],
+          ["Video Game", sheets.games]
         ].filter(([, url]) => !!url);
 
         const texts = await Promise.all(sources.map(([, url]) => fetchSheetCSV(url)));
