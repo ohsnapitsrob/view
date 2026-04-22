@@ -1,6 +1,6 @@
 (function () {
   const loadingEl = document.getElementById("statsLoading");
-  const gridEl = document.getElementById("statsGrid");
+  const rootEl = document.getElementById("statsRoot");
 
   function norm(s) {
     return (s || "").toString().trim();
@@ -21,14 +21,6 @@
     if (x === "game" || x === "games" || x === "video game" || x === "video games") return "Video Game";
     if (x === "misc" || x === "other") return "Misc";
     return norm(t);
-  }
-
-  function displayType(type) {
-    if (type === "Film") return "Movies";
-    if (type === "TV") return "TV";
-    if (type === "Music Video") return "Music Videos";
-    if (type === "Video Game") return "Video Games";
-    return "Misc";
   }
 
   function coerceNumber(x) {
@@ -130,13 +122,17 @@
     });
   }
 
-  function formatMonthKey(key) {
-    const [year, month] = key.split("-");
-    const d = new Date(Number(year), Number(month) - 1, 1);
+  function formatMonth(d) {
+    if (!(d instanceof Date)) return "—";
     return d.toLocaleDateString(undefined, {
       month: "long",
       year: "numeric"
     });
+  }
+
+  function formatMonthKey(key) {
+    const [year, month] = key.split("-");
+    return formatMonth(new Date(Number(year), Number(month) - 1, 1));
   }
 
   function monthKey(d) {
@@ -149,58 +145,114 @@
     return String(d.getFullYear());
   }
 
-  function postProcessRow(row, fallbackType) {
-    const title = norm(row.title);
-    const type = normalizeType(row.type || fallbackType);
-    const lat = coerceNumber(row.lat);
-    const lng = coerceNumber(row.lng);
+  function dayKey(d) {
+    return d.toISOString().slice(0, 10);
+  }
 
-    if (!title || typeof lat !== "number" || typeof lng !== "number") return null;
+  function pctChange(current, previous) {
+    if (!previous && !current) return 0;
+    if (!previous) return 100;
+    return ((current - previous) / previous) * 100;
+  }
 
-    const visited = parseVisitedDate(row["date-formatted"] || row["raw-date"] || row["visited"] || row["visit-date"]);
+  function trendMeta(current, previous) {
+    const change = pctChange(current, previous);
+    if (!Number.isFinite(change)) return { text: "new", cls: "flat" };
+    if (Math.abs(change) < 0.5) return { text: "flat", cls: "flat" };
+    if (change > 0) return { text: `up ${change.toFixed(1)}%`, cls: "up" };
+    return { text: `down ${Math.abs(change).toFixed(1)}%`, cls: "down" };
+  }
 
-    return {
-      id: norm(row.id),
-      title,
-      type,
-      place: norm(row.place),
-      country: norm(row.country),
-      collections: splitPipe(row.collections),
-      visited
-    };
+  function median(nums) {
+    if (!nums.length) return 0;
+    const sorted = [...nums].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    if (sorted.length % 2) return sorted[mid];
+    return (sorted[mid - 1] + sorted[mid]) / 2;
   }
 
   function titleTypeKey(title, type) {
     return `${title}|||${type}`;
   }
 
-  function card(kicker, value, sub = "", extraClass = "") {
-    const div = document.createElement("div");
-    div.className = `stat-card ${extraClass}`.trim();
-    div.innerHTML = `
-      <div class="stat-kicker">${kicker}</div>
-      <div class="stat-value">${value}</div>
-      ${sub ? `<div class="stat-sub">${sub}</div>` : ""}
-    `;
-    return div;
+  function escapeHtml(s) {
+    return (s || "").toString()
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
-  function listCard(title, rows, extraClass = "") {
-    const div = document.createElement("div");
-    div.className = `stat-card ${extraClass}`.trim();
-
-    const rowsHtml = rows.map((row) => `
-      <div class="stat-list-row">
-        <div class="stat-list-label">${row.label}</div>
-        <div class="stat-list-value">${row.value}</div>
+  function panel({ kicker, value, sub = "", cls = "", delta = null, badges = [] }) {
+    return `
+      <div class="panel ${cls}">
+        <div class="panel-kicker">${escapeHtml(kicker)}</div>
+        <div class="panel-value">${value}</div>
+        ${delta ? `<div class="delta ${delta.cls}">${escapeHtml(delta.text)}</div>` : ""}
+        ${sub ? `<div class="panel-sub">${sub}</div>` : ""}
+        ${badges.length ? `<div class="badge-row">${badges.map(x => `<div class="badge">${escapeHtml(x)}</div>`).join("")}</div>` : ""}
       </div>
-    `).join("");
-
-    div.innerHTML = `
-      <div class="stat-kicker">${title}</div>
-      <div class="stat-list">${rowsHtml}</div>
     `;
-    return div;
+  }
+
+  function listPanel({ title, rows, cls = "" }) {
+    return `
+      <div class="panel ${cls}">
+        <h3 class="section-title">${escapeHtml(title)}</h3>
+        <div class="stat-list">
+          ${rows.map((row) => `
+            <div class="stat-list-row">
+              <div class="stat-list-label">${escapeHtml(row.label)}</div>
+              <div class="stat-list-value">${row.value}</div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function meterPanel({ title, subtitle = "", items, cls = "" }) {
+    const max = Math.max(...items.map(x => x.value), 1);
+    return `
+      <div class="panel ${cls}">
+        <h3 class="section-title">${escapeHtml(title)}</h3>
+        ${subtitle ? `<div class="section-copy">${escapeHtml(subtitle)}</div>` : ""}
+        <div class="meter-list">
+          ${items.map((item) => `
+            <div class="meter-row">
+              <div class="meter-head">
+                <div>${escapeHtml(item.label)}</div>
+                <div><strong>${escapeHtml(item.display || formatNumber(item.value))}</strong></div>
+              </div>
+              <div class="meter-track">
+                <div class="meter-fill" style="width:${Math.max(6, (item.value / max) * 100)}%"></div>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function barChartPanel({ title, subtitle = "", data, cls = "" }) {
+    const max = Math.max(...data.map(x => x.value), 1);
+    return `
+      <div class="panel ${cls}">
+        <h3 class="section-title">${escapeHtml(title)}</h3>
+        ${subtitle ? `<div class="section-copy">${escapeHtml(subtitle)}</div>` : ""}
+        <div class="spark-wrap">
+          <div class="spark-chart">
+            ${data.map((item) => `
+              <div class="spark-col">
+                <div class="spark-bar" style="height:${Math.max(8, (item.value / max) * 150)}px"></div>
+                <div class="spark-label">${escapeHtml(item.label)}</div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   async function loadAll() {
@@ -226,8 +278,21 @@
       const [fallbackType] = sources[i];
       const parsed = rowsToObjects(parseCSV(texts[i]));
       parsed.forEach((r) => {
-        const loc = postProcessRow(r, fallbackType);
-        if (loc) rows.push(loc);
+        const title = norm(r.title);
+        const type = normalizeType(r.type || fallbackType);
+        const lat = coerceNumber(r.lat);
+        const lng = coerceNumber(r.lng);
+        if (!title || typeof lat !== "number" || typeof lng !== "number") return;
+
+        rows.push({
+          id: norm(r.id),
+          title,
+          type,
+          place: norm(r.place),
+          country: norm(r.country),
+          collections: splitPipe(r.collections),
+          visited: parseVisitedDate(r["date-formatted"] || r["raw-date"] || r["visited"] || r["visit-date"])
+        });
       });
     }
 
@@ -239,25 +304,41 @@
     const nowYear = now.getFullYear();
     const nowMonth = now.getMonth();
 
-    const totalScenes = rows.length;
+    const prevMonthDate = new Date(nowYear, nowMonth - 1, 1);
+    const prevYear = nowYear - 1;
 
     const countriesAll = new Set();
     const countriesThisMonth = new Set();
+    const countriesPrevMonth = new Set();
     const countriesThisYear = new Set();
+    const countriesPrevYear = new Set();
 
-    const titleTypeMap = new Map(); // unique title+type
-    const titleMap = new Map();     // grouped by title only
+    const titleTypeMap = new Map();
+    const titleMap = new Map();
     const typeTitleSets = new Map();
 
     const scenesByDay = new Map();
     const scenesByMonth = new Map();
     const scenesByYear = new Map();
+    const scenesByCountry = new Map();
+    const scenesByWeekday = new Map();
+    const scenesByType = new Map();
 
     let scenesThisMonth = 0;
+    let scenesPrevMonth = 0;
     let scenesThisYear = 0;
+    let scenesPrevYear = 0;
+
+    let firstVisit = null;
+    let latestVisit = null;
 
     rows.forEach((row) => {
-      if (row.country) countriesAll.add(row.country);
+      if (row.country) {
+        countriesAll.add(row.country);
+        scenesByCountry.set(row.country, (scenesByCountry.get(row.country) || 0) + 1);
+      }
+
+      scenesByType.set(row.type, (scenesByType.get(row.type) || 0) + 1);
 
       const ttKey = titleTypeKey(row.title, row.type);
       titleTypeMap.set(ttKey, { title: row.title, type: row.type });
@@ -279,27 +360,46 @@
       if (row.visited instanceof Date) {
         const d = row.visited;
 
-        const dayKey = d.toISOString().slice(0, 10);
-        const month = monthKey(d);
-        const year = yearKey(d);
+        if (!firstVisit || d < firstVisit) firstVisit = d;
+        if (!latestVisit || d > latestVisit) latestVisit = d;
 
-        scenesByDay.set(dayKey, (scenesByDay.get(dayKey) || 0) + 1);
-        scenesByMonth.set(month, (scenesByMonth.get(month) || 0) + 1);
-        scenesByYear.set(year, (scenesByYear.get(year) || 0) + 1);
+        const dKey = dayKey(d);
+        const mKey = monthKey(d);
+        const yKey = yearKey(d);
+        const weekday = d.toLocaleDateString(undefined, { weekday: "long" });
+
+        scenesByDay.set(dKey, (scenesByDay.get(dKey) || 0) + 1);
+        scenesByMonth.set(mKey, (scenesByMonth.get(mKey) || 0) + 1);
+        scenesByYear.set(yKey, (scenesByYear.get(yKey) || 0) + 1);
+        scenesByWeekday.set(weekday, (scenesByWeekday.get(weekday) || 0) + 1);
 
         if (d.getFullYear() === nowYear) {
           scenesThisYear += 1;
           if (row.country) countriesThisYear.add(row.country);
         }
 
+        if (d.getFullYear() === prevYear) {
+          scenesPrevYear += 1;
+          if (row.country) countriesPrevYear.add(row.country);
+        }
+
         if (d.getFullYear() === nowYear && d.getMonth() === nowMonth) {
           scenesThisMonth += 1;
           if (row.country) countriesThisMonth.add(row.country);
+        }
+
+        if (
+          d.getFullYear() === prevMonthDate.getFullYear() &&
+          d.getMonth() === prevMonthDate.getMonth()
+        ) {
+          scenesPrevMonth += 1;
+          if (row.country) countriesPrevMonth.add(row.country);
         }
       }
     });
 
     const titleEntries = Array.from(titleMap.values());
+    const titleSceneCounts = titleEntries.map(x => x.count);
 
     const mostScenesEntry = [...titleEntries]
       .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title))[0] || null;
@@ -307,7 +407,12 @@
     const leastScenesEntry = [...titleEntries]
       .sort((a, b) => a.count - b.count || a.title.localeCompare(b.title))[0] || null;
 
+    const repeatedTitles = titleEntries.filter(x => x.count > 1).length;
+    const singleSceneTitles = titleEntries.filter(x => x.count === 1).length;
+
     const totalTitles = titleEntries.length;
+    const totalScenes = rows.length;
+    const totalCountries = countriesAll.size;
 
     const mostScenesDay = [...scenesByDay.entries()]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] || null;
@@ -315,22 +420,59 @@
     const mostScenesMonth = [...scenesByMonth.entries()]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] || null;
 
-    const avgScenesPerMonth = scenesByMonth.size
-      ? totalScenes / scenesByMonth.size
-      : 0;
+    const avgScenesPerMonth = scenesByMonth.size ? totalScenes / scenesByMonth.size : 0;
+    const avgScenesPerYear = scenesByYear.size ? totalScenes / scenesByYear.size : 0;
+    const avgScenesPerTitle = totalTitles ? totalScenes / totalTitles : 0;
+    const medianScenesPerTitle = median(titleSceneCounts);
 
-    const avgScenesPerYear = scenesByYear.size
-      ? totalScenes / scenesByYear.size
-      : 0;
+    const sortedVisitDates = rows
+      .map(x => x.visited)
+      .filter(Boolean)
+      .sort((a, b) => a - b);
+
+    let longestGapDays = 0;
+    let longestGapFrom = null;
+    let longestGapTo = null;
+    for (let i = 1; i < sortedVisitDates.length; i++) {
+      const prev = sortedVisitDates[i - 1];
+      const curr = sortedVisitDates[i];
+      const gapDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
+      if (gapDays > longestGapDays) {
+        longestGapDays = gapDays;
+        longestGapFrom = prev;
+        longestGapTo = curr;
+      }
+    }
+
+    const topCountries = [...scenesByCountry.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 6)
+      .map(([label, value]) => ({ label, value }));
+
+    const weekdayChamp = [...scenesByWeekday.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] || null;
+
+    const recentMonths = [...scenesByMonth.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-8)
+      .map(([key, value]) => ({ label: formatMonthKey(key), value, short: key }));
+
+    const yearlyBreakdown = [...scenesByYear.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([label, value]) => ({ label, value }));
 
     return {
       totalScenes,
-      totalCountries: countriesAll.size,
-      countriesThisMonth: countriesThisMonth.size,
-      countriesThisYear: countriesThisYear.size,
-      scenesThisMonth,
-      scenesThisYear,
       totalTitles,
+      totalCountries,
+      scenesThisMonth,
+      scenesPrevMonth,
+      scenesThisYear,
+      scenesPrevYear,
+      countriesThisMonth: countriesThisMonth.size,
+      countriesPrevMonth: countriesPrevMonth.size,
+      countriesThisYear: countriesThisYear.size,
+      countriesPrevYear: countriesPrevYear.size,
 
       movieTitleCount: (typeTitleSets.get("Film") || new Set()).size,
       tvTitleCount: (typeTitleSets.get("TV") || new Set()).size,
@@ -338,136 +480,228 @@
       videoGameTitleCount: (typeTitleSets.get("Video Game") || new Set()).size,
       miscTitleCount: (typeTitleSets.get("Misc") || new Set()).size,
 
+      movieScenes: scenesByType.get("Film") || 0,
+      tvScenes: scenesByType.get("TV") || 0,
+      musicVideoScenes: scenesByType.get("Music Video") || 0,
+      videoGameScenes: scenesByType.get("Video Game") || 0,
+      miscScenes: scenesByType.get("Misc") || 0,
+
       mostScenesEntry,
       leastScenesEntry,
       mostScenesDay,
       mostScenesMonth,
       avgScenesPerMonth,
       avgScenesPerYear,
-
-      scenesByMonth,
-      scenesByYear
+      avgScenesPerTitle,
+      medianScenesPerTitle,
+      repeatedTitles,
+      singleSceneTitles,
+      firstVisit,
+      latestVisit,
+      longestGapDays,
+      longestGapFrom,
+      longestGapTo,
+      weekdayChamp,
+      topCountries,
+      recentMonths,
+      yearlyBreakdown
     };
   }
 
   function render(stats) {
+    const monthDelta = trendMeta(stats.scenesThisMonth, stats.scenesPrevMonth);
+    const yearDelta = trendMeta(stats.scenesThisYear, stats.scenesPrevYear);
+    const countryMonthDelta = trendMeta(stats.countriesThisMonth, stats.countriesPrevMonth);
+    const countryYearDelta = trendMeta(stats.countriesThisYear, stats.countriesPrevYear);
+
+    const hero = `
+      <div class="hero-band">
+        <div class="hero-card">
+          <div class="hero-kicker">Grand total</div>
+          <div class="hero-value">${formatNumber(stats.totalScenes)}</div>
+          <div class="hero-sub">Scenes visited across ${formatNumber(stats.totalTitles)} titles and ${formatNumber(stats.totalCountries)} countries. Extremely normal amount of geeking out.</div>
+          <div class="hero-metrics">
+            <div class="hero-pill">${formatNumber(stats.movieTitleCount)} movie titles</div>
+            <div class="hero-pill">${formatNumber(stats.tvTitleCount)} TV titles</div>
+            <div class="hero-pill">${formatNumber(stats.musicVideoTitleCount)} music videos</div>
+            <div class="hero-pill">${formatNumber(stats.videoGameTitleCount)} video games</div>
+          </div>
+        </div>
+
+        <div class="spotlight-stack">
+          <div class="spotlight-card">
+            <div class="spotlight-label">Scenes visited this month</div>
+            <div class="spotlight-main">
+              <div class="spotlight-value">${formatNumber(stats.scenesThisMonth)}</div>
+              <div class="delta ${monthDelta.cls}">${monthDelta.text}</div>
+            </div>
+          </div>
+
+          <div class="spotlight-card">
+            <div class="spotlight-label">Scenes visited this year</div>
+            <div class="spotlight-main">
+              <div class="spotlight-value">${formatNumber(stats.scenesThisYear)}</div>
+              <div class="delta ${yearDelta.cls}">${yearDelta.text}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const topStats = `
+      <div class="stats-grid">
+        ${panel({
+          kicker: "Countries visited this month",
+          value: formatNumber(stats.countriesThisMonth),
+          delta: countryMonthDelta,
+          cls: "gradient blue"
+        })}
+
+        ${panel({
+          kicker: "Countries visited this year",
+          value: formatNumber(stats.countriesThisYear),
+          delta: countryYearDelta,
+          cls: "gradient purple"
+        })}
+
+        ${panel({
+          kicker: "Average scenes per title",
+          value: stats.avgScenesPerTitle.toFixed(1),
+          sub: `Median ${stats.medianScenesPerTitle.toFixed(1)}`
+        })}
+
+        ${panel({
+          kicker: "Repeatable titles",
+          value: formatNumber(stats.repeatedTitles),
+          sub: `${formatNumber(stats.singleSceneTitles)} single-scene titles`
+        })}
+
+        ${panel({
+          kicker: "Most scenes",
+          value: stats.mostScenesEntry ? escapeHtml(stats.mostScenesEntry.title) : "—",
+          sub: stats.mostScenesEntry ? `${formatNumber(stats.mostScenesEntry.count)} scenes` : "",
+          cls: "wide gradient dark",
+          badges: stats.mostScenesEntry ? ["Main character energy"] : []
+        })}
+
+        ${panel({
+          kicker: "Least scenes",
+          value: stats.leastScenesEntry ? escapeHtml(stats.leastScenesEntry.title) : "—",
+          sub: stats.leastScenesEntry ? `${formatNumber(stats.leastScenesEntry.count)} scene${stats.leastScenesEntry.count === 1 ? "" : "s"}` : "",
+          cls: "wide"
+        })}
+
+        ${panel({
+          kicker: "Most scenes found in a day",
+          value: stats.mostScenesDay ? formatNumber(stats.mostScenesDay[1]) : "—",
+          sub: stats.mostScenesDay ? formatDate(new Date(stats.mostScenesDay[0])) : ""
+        })}
+
+        ${panel({
+          kicker: "Most scenes found in a month",
+          value: stats.mostScenesMonth ? formatNumber(stats.mostScenesMonth[1]) : "—",
+          sub: stats.mostScenesMonth ? formatMonthKey(stats.mostScenesMonth[0]) : ""
+        })}
+
+        ${panel({
+          kicker: "Latest visit",
+          value: stats.latestVisit ? formatDate(stats.latestVisit) : "—",
+          sub: stats.latestVisit ? "Most recent scene-hunting outing" : ""
+        })}
+
+        ${panel({
+          kicker: "First recorded visit",
+          value: stats.firstVisit ? formatDate(stats.firstVisit) : "—",
+          sub: stats.firstVisit ? "Where the obsession started" : ""
+        })}
+
+        ${panel({
+          kicker: "Longest gap between visits",
+          value: stats.longestGapDays ? `${formatNumber(stats.longestGapDays)} days` : "—",
+          sub: stats.longestGapFrom && stats.longestGapTo ? `${formatDate(stats.longestGapFrom)} → ${formatDate(stats.longestGapTo)}` : ""
+        })}
+
+        ${panel({
+          kicker: "Most active weekday",
+          value: stats.weekdayChamp ? escapeHtml(stats.weekdayChamp[0]) : "—",
+          sub: stats.weekdayChamp ? `${formatNumber(stats.weekdayChamp[1])} scenes logged` : ""
+        })}
+
+        ${meterPanel({
+          title: "Title count by type",
+          subtitle: "How your library spreads across formats.",
+          items: [
+            { label: "Movies", value: stats.movieTitleCount },
+            { label: "TV", value: stats.tvTitleCount },
+            { label: "Music Videos", value: stats.musicVideoTitleCount },
+            { label: "Video Games", value: stats.videoGameTitleCount },
+            { label: "Misc", value: stats.miscTitleCount }
+          ],
+          cls: "wide"
+        })}
+
+        ${meterPanel({
+          title: "Scene count by type",
+          subtitle: "Where most of your scene volume lives.",
+          items: [
+            { label: "Movies", value: stats.movieScenes },
+            { label: "TV", value: stats.tvScenes },
+            { label: "Music Videos", value: stats.musicVideoScenes },
+            { label: "Video Games", value: stats.videoGameScenes },
+            { label: "Misc", value: stats.miscScenes }
+          ],
+          cls: "wide"
+        })}
+
+        ${barChartPanel({
+          title: "Recent month momentum",
+          subtitle: "Last 8 active months, because charts make everything feel more official.",
+          data: stats.recentMonths.map(x => ({
+            label: x.short.slice(5),
+            value: x.value
+          })),
+          cls: "wide"
+        })}
+
+        ${listPanel({
+          title: "Top countries",
+          rows: stats.topCountries.length
+            ? stats.topCountries.map(item => ({
+                label: item.label,
+                value: `${formatNumber(item.value)} scenes`
+              }))
+            : [{ label: "No countries yet", value: "—" }],
+          cls: "wide"
+        })}
+
+        ${listPanel({
+          title: "Yearly breakdown",
+          rows: stats.yearlyBreakdown.length
+            ? stats.yearlyBreakdown.map(item => ({
+                label: item.label,
+                value: `${formatNumber(item.value)} scenes`
+              }))
+            : [{ label: "No dated visits yet", value: "—" }],
+          cls: "wide"
+        })}
+
+        ${panel({
+          kicker: "Average scenes per month",
+          value: stats.avgScenesPerMonth.toFixed(1),
+          sub: "Across all active months"
+        })}
+
+        ${panel({
+          kicker: "Average scenes per year",
+          value: stats.avgScenesPerYear.toFixed(1),
+          sub: "Across all active years"
+        })}
+      </div>
+    `;
+
+    rootEl.innerHTML = hero + topStats;
     loadingEl.style.display = "none";
-    gridEl.style.display = "grid";
-    gridEl.innerHTML = "";
-
-    gridEl.appendChild(card(
-      "Total scenes visited",
-      formatNumber(stats.totalScenes)
-    ));
-
-    gridEl.appendChild(card(
-      "Total titles",
-      formatNumber(stats.totalTitles)
-    ));
-
-    gridEl.appendChild(card(
-      "Total countries visited",
-      formatNumber(stats.totalCountries)
-    ));
-
-    gridEl.appendChild(card(
-      "Scenes visited this month",
-      formatNumber(stats.scenesThisMonth)
-    ));
-
-    gridEl.appendChild(card(
-      "Scenes visited this year",
-      formatNumber(stats.scenesThisYear)
-    ));
-
-    gridEl.appendChild(card(
-      "Countries visited this month",
-      formatNumber(stats.countriesThisMonth)
-    ));
-
-    gridEl.appendChild(card(
-      "Countries visited this year",
-      formatNumber(stats.countriesThisYear)
-    ));
-
-    gridEl.appendChild(card(
-      "Average scenes per month",
-      stats.avgScenesPerMonth.toFixed(1)
-    ));
-
-    gridEl.appendChild(card(
-      "Average scenes per year",
-      stats.avgScenesPerYear.toFixed(1)
-    ));
-
-    gridEl.appendChild(card(
-      "Most scenes",
-      stats.mostScenesEntry ? escapeHtml(stats.mostScenesEntry.title) : "—",
-      stats.mostScenesEntry ? `${formatNumber(stats.mostScenesEntry.count)} scenes` : "",
-      "wide"
-    ));
-
-    gridEl.appendChild(card(
-      "Least scenes",
-      stats.leastScenesEntry ? escapeHtml(stats.leastScenesEntry.title) : "—",
-      stats.leastScenesEntry ? `${formatNumber(stats.leastScenesEntry.count)} scene${stats.leastScenesEntry.count === 1 ? "" : "s"}` : "",
-      "wide"
-    ));
-
-    gridEl.appendChild(card(
-      "Most scenes found in a day",
-      stats.mostScenesDay ? formatNumber(stats.mostScenesDay[1]) : "—",
-      stats.mostScenesDay ? formatDate(new Date(stats.mostScenesDay[0])) : "",
-      "wide"
-    ));
-
-    gridEl.appendChild(card(
-      "Most scenes found in a month",
-      stats.mostScenesMonth ? formatNumber(stats.mostScenesMonth[1]) : "—",
-      stats.mostScenesMonth ? formatMonthKey(stats.mostScenesMonth[0]) : "",
-      "wide"
-    ));
-
-    gridEl.appendChild(listCard("Title counts by type", [
-      { label: "Movies", value: formatNumber(stats.movieTitleCount) },
-      { label: "TV", value: formatNumber(stats.tvTitleCount) },
-      { label: "Music Videos", value: formatNumber(stats.musicVideoTitleCount) },
-      { label: "Video Games", value: formatNumber(stats.videoGameTitleCount) },
-      { label: "Misc", value: formatNumber(stats.miscTitleCount) }
-    ], "wide"));
-
-    const monthRows = [...stats.scenesByMonth.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .slice(-6)
-      .map(([key, count]) => ({
-        label: formatMonthKey(key),
-        value: `${formatNumber(count)} scenes`
-      }));
-
-    gridEl.appendChild(listCard(
-      "Recent months",
-      monthRows.length ? monthRows : [{ label: "No dated visits yet", value: "—" }],
-      "wide"
-    ));
-
-    const yearRows = [...stats.scenesByYear.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([key, count]) => ({
-        label: key,
-        value: `${formatNumber(count)} scenes`
-      }));
-
-    gridEl.appendChild(listCard(
-      "By year",
-      yearRows.length ? yearRows : [{ label: "No dated visits yet", value: "—" }],
-      "wide"
-    ));
-
-    gridEl.appendChild(card(
-      "Geek note",
-      "Yes, this page is milking the data.",
-      "And honestly it should."
-    ));
+    rootEl.style.display = "block";
   }
 
   async function init() {
