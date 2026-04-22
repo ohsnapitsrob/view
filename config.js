@@ -1,6 +1,6 @@
 // config.js
 window.APP_CONFIG = {
-  MAPTILER_KEY: "4iGDVzk2f6BFmiqgFyyU",
+  MAPTILER_KEY: "lfDgDwVrhGWudpjiHOqx",
   MAP_STYLE: "streets",
 
   // Google Sheets tabs published as CSV:
