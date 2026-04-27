@@ -3,7 +3,7 @@ window.App = window.App || {};
 App.Data = (function () {
   let ALL = [];
   let allMarkers = [];
-  const groupsIndex = new Map(); // "Kind::Label" -> Marker[]
+  const groupsIndex = new Map();
 
   function norm(s) { return (s || "").toString().trim(); }
 
@@ -79,7 +79,7 @@ App.Data = (function () {
     if (x === "film" || x === "movie" || x === "movies") return "Film";
     if (x === "tv" || x === "tv show" || x === "tv shows" || x === "series") return "TV";
     if (x === "music video" || x === "music videos" || x === "mv") return "Music Video";
-    if (x === "video games" || x === "video game" || x === "game" || x === "games") return "Video Game";
+    if (x === "game" || x === "games" || x === "video game" || x === "video games") return "Video Game";
     if (x === "misc" || x === "other") return "Misc";
     return norm(t);
   }
@@ -89,58 +89,6 @@ App.Data = (function () {
     if (!k) return;
     if (!mapObj.has(k)) mapObj.set(k, []);
     mapObj.get(k).push(val);
-  }
-
-  // ICONS
-  function getBadgeText(type) {
-    const t = normalizeType(type);
-    if (t === "Film") return "F";
-    if (t === "TV") return "TV";
-    if (t === "Music Video") return "MV";
-    if (t === "Video Game") return "G";
-    return "?";
-  }
-
-  function badgeFontSize(badge) {
-    return badge.length === 1 ? 4.6 : 3.6;
-  }
-
-  function svgPin(color, badge) {
-    const fs = badgeFontSize(badge);
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24">
-        <path fill="${color}"
-          d="M12 2c-3.314 0-6 2.686-6 6c0 4.5 6 14 6 14s6-9.5 6-14c0-3.314-2.686-6-6-6z"/>
-        <circle cx="12" cy="8" r="4.2" fill="white"/>
-        <text x="12" y="8.4"
-              text-anchor="middle" dominant-baseline="middle"
-              font-size="${fs}" font-weight="800"
-              font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
-              fill="#111827" stroke="white" stroke-width="0.7" paint-order="stroke">
-          ${badge}
-        </text>
-      </svg>`;
-    return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
-  }
-
-  function iconForType(type) {
-    const t = normalizeType(type);
-    const colors = {
-      Film: "#2563eb",
-      TV: "#16a34a",
-      "Music Video": "#db2777",
-      Misc: "#6b7280",
-      "Video Game": "#FFA500"
-    };
-    const badge = getBadgeText(t);
-    const color = colors[t] || colors.Misc;
-
-    return L.icon({
-      iconUrl: svgPin(color, badge),
-      iconSize: [50, 50],
-      iconAnchor: [25, 50],
-      popupAnchor: [0, -40]
-    });
   }
 
   async function fetchSheetCSV(url) {
@@ -170,7 +118,6 @@ App.Data = (function () {
       aliases: splitPipe(row.aliases),
       images: splitPipe(row.images),
 
-      // extra CSV fields stored for later
       exportFileName: norm(row["export-file-name"]),
       imdb: norm(row["imdb"]),
       rawDate: norm(row["raw-date"]),
@@ -191,7 +138,8 @@ App.Data = (function () {
     const cfg = window.APP_CONFIG || {};
     const sheets = cfg.SHEETS || {};
 
-    const hasSheets = sheets.movies || sheets.tv || sheets.music_videos || sheets.misc;
+    const hasSheets =
+      sheets.movies || sheets.tv || sheets.music_videos || sheets.games || sheets.misc;
 
     try {
       let locs = [];
@@ -201,8 +149,8 @@ App.Data = (function () {
           ["Film", sheets.movies],
           ["TV", sheets.tv],
           ["Music Video", sheets.music_videos],
-          ["Misc", sheets.misc],
-          ["Video Game", sheets.games]
+          ["Video Game", sheets.games],
+          ["Misc", sheets.misc]
         ].filter(([, url]) => !!url);
 
         const texts = await Promise.all(sources.map(([, url]) => fetchSheetCSV(url)));
@@ -223,7 +171,6 @@ App.Data = (function () {
 
       ALL = locs;
 
-      // ✅ Let Router open modals via ?loc=...
       App.Router.setLocationsIndex(ALL);
 
       const markersByTitle = new Map();
@@ -235,17 +182,15 @@ App.Data = (function () {
       groupsIndex.clear();
 
       ALL.forEach((loc) => {
-        const mk = L.marker([loc.lat, loc.lng], { icon: iconForType(loc.type) });
-        mk.__loc = loc;
-        mk.on("click", () => App.Modal.open(loc));
-        loc.__marker = mk;
+        const marker = { __loc: loc };
+        loc.__marker = marker;
 
-        allMarkers.push(mk);
+        allMarkers.push(marker);
 
-        addToMapList(markersByTitle, loc.title, mk);
-        addToMapList(markersBySeries, loc.series, mk);
-        (loc.collections || []).forEach((c) => addToMapList(markersByCollection, c, mk));
-        addToMapList(markersByType, loc.type, mk);
+        addToMapList(markersByTitle, loc.title, marker);
+        addToMapList(markersBySeries, loc.series, marker);
+        (loc.collections || []).forEach((c) => addToMapList(markersByCollection, c, marker));
+        addToMapList(markersByType, loc.type, marker);
       });
 
       App.Map.rebuildCluster(allMarkers);
