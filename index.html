@@ -5,15 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>On the Map</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-
+  <link href="https://cdn.maptiler.com/maptiler-sdk-js/v3.8.0/maptiler-sdk.css" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-  <!-- TOP BAR -->
   <header class="topbar">
     <div class="topbar-inner">
       <a href="./browse/" class="icon-btn topbar-browse-btn" aria-label="Browse titles" title="Browse titles">
@@ -40,10 +36,8 @@
     </div>
   </header>
 
-  <!-- MAP -->
   <div id="map"></div>
 
-  <!-- RESULTS MODAL -->
   <div id="resultsModal" class="modal" aria-hidden="true">
     <div class="modal-card">
       <button id="resultsCloseBtn" class="btn close">Close</button>
@@ -57,7 +51,6 @@
     </div>
   </div>
 
-  <!-- LOCATION MODAL -->
   <div id="modal" class="modal location-modal" aria-hidden="true">
     <div class="modal-card modal-card-location">
       <button id="closeBtn" class="btn close">Close</button>
@@ -74,9 +67,7 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdn.maptiler.com/maptiler-sdk-js/v3.8.0/maptiler-sdk.umd.min.js"></script>
   <script src="https://unpkg.com/fuse.js@7.0.0/dist/fuse.min.js"></script>
 
   <script src="config.js"></script>
