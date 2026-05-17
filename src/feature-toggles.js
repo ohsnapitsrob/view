@@ -7,6 +7,7 @@ FTS.FeatureToggles = {
   privacyConsentEnabled: true,
   mediaEmbedsEnabled: true,
   plausibleAnalyticsEnabled: true,
+  plausibleAnalyticsOnStagingEnabled: false,
   siteDisclaimerEnabled: false,
   settingsMapSectionEnabled: true,
 
@@ -21,7 +22,8 @@ FTS.FeatureToggles = {
   homeRailTVEnabled: false,
   homeRailMusicVideosEnabled: true,
   homeRailNationalTrustEnabled: true,
-  homeRailGamesEnabled: false,
+  homeRailPeopleEnabled: true,
+  homeRailGamesEnabled: true,
   homeGenreRailsEnabled: true
 };
 

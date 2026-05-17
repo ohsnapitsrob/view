@@ -9,8 +9,21 @@ FTS.Analytics = (function () {
   let historyWrapped = false;
   let titleObserverStarted = false;
 
+  function isStaging() {
+    const host = (window.location.hostname || "").toLowerCase();
+    return host.includes("staging") || host.includes("preview") || host.includes("github.dev");
+  }
+
   function enabled() {
-    return window.FTS?.Features?.isEnabled("plausibleAnalyticsEnabled") === true;
+    if (window.FTS?.Features?.isEnabled("plausibleAnalyticsEnabled") !== true) {
+      return false;
+    }
+
+    if (isStaging()) {
+      return window.FTS?.Features?.isEnabled("plausibleAnalyticsOnStagingEnabled") === true;
+    }
+
+    return true;
   }
 
   function getParams() {

@@ -3,15 +3,9 @@
     if (document.body.dataset.navRoot) return document.body.dataset.navRoot;
 
     const path = window.location.pathname.replace(/\/+$/, "");
+    const nestedRoutes = ["/browse", "/explore", "/title", "/stats", "/national-trust", "/privacy", "/metadata", "/person"];
 
-    if (
-      path.endsWith("/browse") ||
-      path.endsWith("/explore") ||
-      path.endsWith("/title") ||
-      path.endsWith("/stats") ||
-      path.endsWith("/national-trust") ||
-      path.endsWith("/privacy")
-    ) {
+    if (nestedRoutes.some((route) => path.endsWith(route))) {
       return "../";
     }
 
@@ -44,12 +38,11 @@
   function getActiveKey() {
     const path = window.location.pathname.replace(/\/+$/, "");
 
-    if (path.endsWith("/privacy")) return null;
+    if (path === "" || path === "/" || path.endsWith("/index.html")) return "home";
     if (path.endsWith("/browse")) return "browse";
     if (path.endsWith("/explore")) return "map";
-    if (path.endsWith("/title") || path.endsWith("/stats") || path.endsWith("/national-trust")) return "browse";
 
-    return "home";
+    return null;
   }
 
   function iconSvg(icon) {

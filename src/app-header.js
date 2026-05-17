@@ -13,15 +13,9 @@
     if (document.body.dataset.navRoot) return document.body.dataset.navRoot;
 
     const path = getPath();
+    const nestedRoutes = ["/browse", "/explore", "/title", "/stats", "/national-trust", "/privacy", "/metadata", "/person"];
 
-    if (
-      path.endsWith("/browse") ||
-      path.endsWith("/explore") ||
-      path.endsWith("/title") ||
-      path.endsWith("/stats") ||
-      path.endsWith("/national-trust") ||
-      path.endsWith("/privacy")
-    ) {
+    if (nestedRoutes.some((route) => path.endsWith(route))) {
       return "../";
     }
 

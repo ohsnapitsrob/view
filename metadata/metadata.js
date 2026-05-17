@@ -16,6 +16,12 @@
     return `../title/?${params.toString()}`;
   }
 
+  function slugPerson(name, mode) {
+    const params = new URLSearchParams();
+    params.set(mode, name);
+    return `../person/?${params.toString()}`;
+  }
+
   function splitList(value) {
     return normalise(value)
       .split(",")
@@ -124,17 +130,19 @@
       .sort((a, b) => a[0].localeCompare(b[0]));
   }
 
-  function renderPopularRail(items) {
+  function renderPopularRail(items, personMode) {
     return `
       <div class="meta-links meta-links-popular">
-        ${items.slice(0, 10).map(([name]) => `
+        ${items.slice(0, 10).map(([name]) => personMode ? `
+          <a class="meta-link" href="${slugPerson(name, personMode)}">${name}</a>
+        ` : `
           <span class="meta-link">${name}</span>
         `).join("")}
       </div>
     `;
   }
 
-  function renderSection(title, items) {
+  function renderSection(title, items, options = {}) {
     const popular = [...items]
       .sort((a, b) => b[1].length - a[1].length)
       .slice(0, 10);
@@ -142,11 +150,13 @@
     return `
       <section class="meta-section">
         <h2>${title}</h2>
-        ${renderPopularRail(popular)}
+        ${renderPopularRail(popular, options.personMode)}
         <div class="meta-group-grid">
           ${items.map(([name, titles]) => `
             <article class="meta-group">
-              <h3 class="meta-group-title">${name}</h3>
+              <h3 class="meta-group-title">
+                ${options.personMode ? `<a href="${slugPerson(name, options.personMode)}">${name}</a>` : name}
+              </h3>
               <div class="meta-links">
                 ${titles
                   .sort((a, b) => a.localeCompare(b))
@@ -172,8 +182,8 @@
     const runtimes = buildMap(rows, "Runtime");
 
     container.innerHTML = [
-      renderSection("Stars", stars),
-      renderSection("Directors", directors),
+      renderSection("Stars", stars, { personMode: "star" }),
+      renderSection("Directors", directors, { personMode: "director" }),
       renderSection("Genres", genres),
       renderSection("UK Ratings", ratings),
       renderSection("Runtime", runtimes)
