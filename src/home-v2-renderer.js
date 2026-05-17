@@ -45,6 +45,7 @@ FTS.HomeV2Renderer = (function () {
             <h2 class="rail-title">${U.escapeHtml(railConfig.title)}</h2>
             ${railConfig.subHeader ? `<p class="rail-subtitle">${U.escapeHtml(railConfig.subHeader)}</p>` : ""}
           </div>
+          ${railConfig.href ? `<a class="rail-link" href="${U.escapeHtml(railConfig.href)}">${U.escapeHtml(railConfig.linkLabel || "View more")}</a>` : ""}
         </div>
 
         <div class="poster-row ${railConfig.variant === "thumbnail" ? "thumbnail-row" : ""}">
