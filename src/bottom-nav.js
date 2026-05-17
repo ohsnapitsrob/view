@@ -38,12 +38,11 @@
   function getActiveKey() {
     const path = window.location.pathname.replace(/\/+$/, "");
 
-    if (path.endsWith("/privacy")) return null;
+    if (path === "" || path === "/" || path.endsWith("/index.html")) return "home";
     if (path.endsWith("/browse")) return "browse";
     if (path.endsWith("/explore")) return "map";
-    if (path.endsWith("/title") || path.endsWith("/stats") || path.endsWith("/national-trust") || path.endsWith("/metadata") || path.endsWith("/person")) return "browse";
 
-    return "home";
+    return null;
   }
 
   function iconSvg(icon) {
