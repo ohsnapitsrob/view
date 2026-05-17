@@ -175,8 +175,10 @@ FTS.HomeV2Rails = (function () {
     const items = U.shuffle(peopleRows.map((row) => {
       const name = U.norm(row.name);
       const photo = U.safeUrl(row.photo);
+      const disabled = U.norm(row.disable);
       const person = index.get(U.key(name));
 
+      if (disabled) return null;
       if (!name || !photo || !person) return null;
       if (person.titles.size === 1 && person.onlyNoAccess) return null;
 
