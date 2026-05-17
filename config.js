@@ -15,6 +15,7 @@ window.APP_CONFIG = {
   // Google Sheets tabs published as CSV:
   // Put the direct CSV "publish to web" URLs for each tab here.
   TITLE_METADATA_CSV: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRdUpTQ0w232gQ8tP2fEaGvdSe_q5SShKEWS7MOuku4VcCuTpg-rsTrTJ1ztpOyD6FMV98iZTGdzKt1/pub?gid=536921099&single=true&output=csv",
+  PEOPLE_CSV: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRdUpTQ0w232gQ8tP2fEaGvdSe_q5SShKEWS7MOuku4VcCuTpg-rsTrTJ1ztpOyD6FMV98iZTGdzKt1/pub?gid=1996456209&single=true&output=csv",
   SHEETS: {
     movies: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRdUpTQ0w232gQ8tP2fEaGvdSe_q5SShKEWS7MOuku4VcCuTpg-rsTrTJ1ztpOyD6FMV98iZTGdzKt1/pub?gid=0&single=true&output=csv",
     tv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRdUpTQ0w232gQ8tP2fEaGvdSe_q5SShKEWS7MOuku4VcCuTpg-rsTrTJ1ztpOyD6FMV98iZTGdzKt1/pub?gid=1386447371&single=true&output=csv",
