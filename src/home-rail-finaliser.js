@@ -2,6 +2,7 @@ window.FTS = window.FTS || {};
 
 FTS.HomeRailFinaliser = (function () {
   let timer = null;
+  let insertingPeopleRail = false;
 
   function norm(value) {
     return (value || "").toString().trim().toLowerCase();
@@ -11,8 +12,33 @@ FTS.HomeRailFinaliser = (function () {
     return norm(rail?.querySelector?.(".rail-title")?.textContent);
   }
 
-  function moveSpecialRails() {
-    const root = document.getElementById("railsRoot");
+  function railsReady(root) {
+    return Boolean(root) && !root.querySelector(".loading-card") && root.querySelectorAll(":scope > .rail").length > 0;
+  }
+
+  async function ensurePeopleRail(root) {
+    if (!root || root.querySelector(":scope > .rail-people") || insertingPeopleRail) return;
+    if (window.FTS?.Features?.isEnabled("homeRailPeopleEnabled") === false) return;
+    if (!window.FTS?.HomePeopleRail?.html) return;
+
+    insertingPeopleRail = true;
+
+    try {
+      const markup = await window.FTS.HomePeopleRail.html();
+      if (!markup || root.querySelector(":scope > .rail-people")) return;
+
+      const template = document.createElement("template");
+      template.innerHTML = markup.trim();
+      const rail = template.content.firstElementChild;
+      if (rail) root.appendChild(rail);
+    } catch (error) {
+      console.warn("Could not insert people rail", error);
+    } finally {
+      insertingPeopleRail = false;
+    }
+  }
+
+  function moveSpecialRails(root) {
     if (!root) return;
 
     const rails = Array.from(root.querySelectorAll(":scope > .rail"));
@@ -29,8 +55,12 @@ FTS.HomeRailFinaliser = (function () {
     window.FTS?.HomeRails?.makeRailsDraggable?.();
   }
 
-  function finalise() {
-    moveSpecialRails();
+  async function finalise() {
+    const root = document.getElementById("railsRoot");
+    if (!railsReady(root)) return;
+
+    await ensurePeopleRail(root);
+    moveSpecialRails(root);
     refreshDrag();
   }
 
