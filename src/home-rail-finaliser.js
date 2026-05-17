@@ -51,8 +51,60 @@ FTS.HomeRailFinaliser = (function () {
     if (gamesRail) root.appendChild(gamesRail);
   }
 
-  function refreshDrag() {
+  function enableDragForRail(rail) {
+    if (!rail || rail.dataset.peopleDragReady === "true") return;
+
+    rail.dataset.peopleDragReady = "true";
+    rail.scrollLeft = 0;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+    let moved = false;
+
+    rail.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+
+      isDown = true;
+      moved = false;
+      startX = e.pageX;
+      scrollLeft = rail.scrollLeft;
+      rail.classList.add("is-dragging");
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isDown) return;
+
+      const walk = e.pageX - startX;
+      if (Math.abs(walk) > 5) moved = true;
+      rail.scrollLeft = scrollLeft - walk;
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (!isDown) return;
+
+      isDown = false;
+      rail.classList.remove("is-dragging");
+
+      if (moved) {
+        rail.dataset.justDragged = "true";
+        setTimeout(() => {
+          delete rail.dataset.justDragged;
+        }, 150);
+      }
+    });
+
+    rail.addEventListener("click", (e) => {
+      if (rail.dataset.justDragged === "true") {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+  }
+
+  function refreshDrag(root) {
     window.FTS?.HomeRails?.makeRailsDraggable?.();
+    root?.querySelectorAll?.(":scope > .rail-people .poster-row")?.forEach(enableDragForRail);
   }
 
   async function finalise() {
@@ -61,7 +113,7 @@ FTS.HomeRailFinaliser = (function () {
 
     await ensurePeopleRail(root);
     moveSpecialRails(root);
-    refreshDrag();
+    refreshDrag(root);
   }
 
   function schedule() {
