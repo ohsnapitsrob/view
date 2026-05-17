@@ -129,6 +129,25 @@ FTS.HomeV2Rails = (function () {
       });
   }
 
+  function nationalTrustRail(entries) {
+    if (!U.featureEnabled("homeRailNationalTrustEnabled")) return null;
+
+    const allItems = entries
+      .filter((entry) => U.safeUrl(entry.poster))
+      .filter((entry) => U.norm(entry.nt) !== "");
+
+    const items = U.shuffle(allItems).slice(0, MAX_RAIL_ITEMS);
+    if (!items.length) return null;
+
+    return {
+      title: "National Trust On Screen",
+      subHeader: selectionSubHeader(allItems.length, items.length),
+      items,
+      href: "./national-trust/",
+      linkLabel: "Explore National Trust locations"
+    };
+  }
+
   function gamesRail(entries) {
     if (!U.featureEnabled("homeRailGamesEnabled")) return null;
 
@@ -205,12 +224,14 @@ FTS.HomeV2Rails = (function () {
     const topSeries = topUKRail(entries, "TV");
     const jamesBond = franchiseRail(entries, "James Bond", { toggleKey: "homeRailJamesBondEnabled", direction: "desc" });
     const harryPotter = franchiseRail(entries, "Harry Potter", { toggleKey: "homeRailHarryPotterEnabled", direction: "asc" });
+    const nationalTrust = nationalTrustRail(entries);
 
     const randomRails = [
       topFilms,
       topSeries,
       jamesBond,
       harryPotter,
+      nationalTrust,
       ...genreRails(entries)
     ].filter(Boolean);
 
