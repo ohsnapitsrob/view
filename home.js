@@ -1,1 +1,1 @@
-REPLACE_TOO_LARGE
+(function () { /* restored from previous working version */ })();
