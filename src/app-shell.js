@@ -5,12 +5,6 @@
     return window.RUNTIME_CONFIG || {};
   }
 
-  function getSharedScriptBase() {
-    return window.FTS?.Routes?.isNestedRoute?.() ? "../src/" : "./src/";
-  }
-
-  const sharedScriptBase = getSharedScriptBase();
-
   function getScriptTarget() {
     return document.head || document.documentElement;
   }
@@ -23,14 +17,29 @@
     }
   }
 
-  function loadSharedScript(name, attribute, options = {}) {
+  function getFallbackScriptBase() {
+    const path = window.location.pathname.replace(/\/+$/, "");
+    const routeNames = ["browse", "explore", "title", "stats", "national-trust", "privacy", "metadata", "person", "genre"];
+    const isNestedRoute = routeNames.some((route) => path.endsWith(`/${route}`));
+    return isNestedRoute ? "../src/" : "./src/";
+  }
+
+  function getSharedScriptBase() {
+    if (window.FTS?.Routes?.isNestedRoute) {
+      return window.FTS.Routes.isNestedRoute() ? "../src/" : "./src/";
+    }
+
+    return getFallbackScriptBase();
+  }
+
+  function loadScriptFromBase(name, attribute, base, options = {}) {
     if (document.querySelector(`script[${attribute}]`)) {
       return Promise.resolve();
     }
 
     return new Promise((resolve) => {
       const script = document.createElement("script");
-      script.src = `${sharedScriptBase}${name}`;
+      script.src = `${base}${name}`;
       script.setAttribute(attribute, "true");
       script.async = false;
 
@@ -43,6 +52,10 @@
 
       getScriptTarget().appendChild(script);
     });
+  }
+
+  function loadSharedScript(name, attribute, options = {}) {
+    return loadScriptFromBase(name, attribute, getSharedScriptBase(), options);
   }
 
   function dispatchReady(name) {
@@ -59,6 +72,11 @@
     } catch (err) {
       return false;
     }
+  }
+
+  function loadRoutes() {
+    return loadScriptFromBase("routes.js", "data-fts-routes", getFallbackScriptBase())
+      .then(() => dispatchReady("routes"));
   }
 
   function loadPrivacySystem() {
@@ -84,8 +102,7 @@
   function loadAppHeaderModules() {
     return Promise.all([
       loadSharedScript("app-header-title-search.js", "data-fts-app-header-title-search"),
-      loadSharedScript("app-header-map-search.js", "data-fts-app-header-map-search"),
-      loadSharedScript("routes.js", "data-fts-routes")
+      loadSharedScript("app-header-map-search.js", "data-fts-app-header-map-search")
     ]).then(() => {
       return loadSharedScript("app-header.js", "data-fts-app-header");
     }).then(() => dispatchReady("app-header"));
@@ -98,11 +115,11 @@
 
   function loadAnalytics() {
     if (window.FTS?.Features?.isEnabled("plausibleAnalyticsEnabled") !== true) {
-      return;
+      return Promise.resolve();
     }
 
     if (!hasPrivacyChoice()) {
-      return;
+      return Promise.resolve();
     }
 
     return loadSharedScript("analytics.js", "data-fts-analytics")
@@ -111,7 +128,7 @@
 
   function loadEasterEggs() {
     if (window.FTS?.Features?.isEnabled("easterEggsEnabled") !== true) {
-      return;
+      return Promise.resolve();
     }
 
     return loadSharedScript("easter-eggs.js", "data-fts-easter-eggs")
@@ -167,19 +184,21 @@
     });
   }
 
-  loadPrivacySystem();
-  loadAppSettings();
-  loadVisibility();
-  loadAppHeaderModules();
-  loadEasterEggs();
+  loadRoutes().then(() => {
+    loadPrivacySystem();
+    loadAppSettings();
+    loadVisibility();
+    loadAppHeaderModules();
+    loadEasterEggs();
 
-  if (window.FTS?.Features?.isEnabled("iosInstallPromptEnabled") === true) {
-    loadIOSInstallPrompt();
-  }
+    if (window.FTS?.Features?.isEnabled("iosInstallPromptEnabled") === true) {
+      loadIOSInstallPrompt();
+    }
 
-  loadAnalytics();
-  showEnvironmentBadge();
-  loadBottomNav();
+    loadAnalytics();
+    showEnvironmentBadge();
+    loadBottomNav();
+  });
 
   window.addEventListener("load", () => {
     window.FTS?.Privacy?.maybeShowInitialPrompt?.();
