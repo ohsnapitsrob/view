@@ -12,9 +12,10 @@ FTS.HomeV2Renderer = (function () {
       .rail-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
       .rail-header > div:first-child { min-width: 0; }
       .rail-link, .rail-title-link { padding: 4px 8px; }
-      .hero-carousel-row { display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; scroll-snap-type: x mandatory; padding: 0; }
+      .rail-carousel { width: 100%; max-width: 100%; overflow: hidden; }
+      .hero-carousel-row { display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; scroll-snap-type: x mandatory; padding: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
       .hero-carousel-row::-webkit-scrollbar { display: none; }
-      .hero-carousel-card { position: relative; flex: 0 0 100%; aspect-ratio: 3 / 1; border-radius: 0; overflow: hidden; text-decoration: none; background: #111827; scroll-snap-align: start; box-shadow: none; transform: none; transition: none; }
+      .hero-carousel-card { position: relative; flex: 0 0 100%; max-width: 100%; aspect-ratio: 3 / 1; border-radius: 0; overflow: hidden; text-decoration: none; background: #111827; scroll-snap-align: start; box-shadow: none; transform: none; transition: none; box-sizing: border-box; }
       .hero-carousel-card:hover, .hero-carousel-card:focus-visible { transform: none; }
       .hero-carousel-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
       .hero-carousel-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.08) 55%, rgba(0,0,0,0)); display: flex; align-items: flex-end; padding: 22px; box-sizing: border-box; }
