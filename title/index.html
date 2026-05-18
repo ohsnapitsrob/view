@@ -15,7 +15,7 @@
   <script src="../src/site-content.js"></script>
   <script src="../src/app-shell.js"></script>
 </head>
-<body>
+<body data-nav-root="../">
   <noscript>
     <div style="margin:16px; padding:16px; border-radius:18px; background:#111827; color:#ffffff; font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
       <strong>JavaScript is needed for Find That Scene.</strong><br>
@@ -24,11 +24,9 @@
   </noscript>
 
   <main class="title-shell">
-    <section class="title-hero">
-      <div id="titleContent" class="title-content">
-        <div class="fts-loader" aria-label="Loading"></div>
-      </div>
-    </section>
+    <div id="titleContent" class="title-content">
+      <section class="type-loading-stage"><div class="fts-loader" aria-label="Loading"></div></section>
+    </div>
 
     <div data-site-disclaimer></div>
   </main>
