@@ -12,6 +12,7 @@ FTS.FeatureToggles = {
   settingsMapSectionEnabled: true,
 
   homeRailsEnabled: true,
+  homeRailCategoriesEnabled: true,
   homeRailLatestScenesEnabled: true,
   homeRailTopScenesEnabled: true,
   homeRailTopTenStyleEnabled: false,
