@@ -3,6 +3,49 @@ window.FTS = window.FTS || {};
 FTS.HomeV2Renderer = (function () {
   const U = window.FTS.HomeV2Utils;
 
+  function ensureRailLinkStyles() {
+    if (document.getElementById("fts-home-v2-rail-link-style")) return;
+
+    const style = document.createElement("style");
+    style.id = "fts-home-v2-rail-link-style";
+    style.textContent = `
+      .rail-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .rail-header > div:first-child {
+        min-width: 0;
+      }
+
+      .rail-link-icon {
+        width: 38px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        justify-self: end;
+        align-self: center;
+        border-radius: 999px;
+        background: rgba(111, 66, 193, 0.12);
+        color: #6f42c1;
+        text-decoration: none;
+        flex: 0 0 auto;
+      }
+
+      .rail-link-icon svg {
+        width: 24px;
+        height: 24px;
+        display: block;
+        fill: currentColor;
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
   function overlayBadges(title, options = {}) {
     if (!U.featureEnabled("homepagePosterOverlays")) return [];
     if (U.appSettings().hideHomepageTags === true) return [];
@@ -38,14 +81,10 @@ FTS.HomeV2Renderer = (function () {
   function railLink(railConfig) {
     if (!railConfig.href) return "";
 
-    const chevron = `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M9.29 6.71a1 1 0 0 0 0 1.41L13.17 12l-3.88 3.88a1 1 0 1 0 1.41 1.41l4.59-4.59a1 1 0 0 0 0-1.41L10.7 6.7a1 1 0 0 0-1.41 0z"></path>
-      </svg>
-    `;
+    const chevron = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.29 6.71a1 1 0 0 0 0 1.41L13.17 12l-3.88 3.88a1 1 0 1 0 1.41 1.41l4.59-4.59a1 1 0 0 0 0-1.41L10.7 6.7a1 1 0 0 0-1.41 0z"></path></svg>`;
 
     return `
-      <a class="rail-link rail-link-icon" href="${U.escapeHtml(railConfig.href)}" aria-label="${U.escapeHtml(railConfig.linkLabel || railConfig.title)}">
+      <a class="rail-link ${railConfig.linkIcon === "chevron" ? "rail-link-icon" : ""}" href="${U.escapeHtml(railConfig.href)}" aria-label="${U.escapeHtml(railConfig.linkLabel || railConfig.title)}">
         ${railConfig.linkIcon === "chevron" ? chevron : U.escapeHtml(railConfig.linkLabel || "View more")}
       </a>
     `;
@@ -72,6 +111,7 @@ FTS.HomeV2Renderer = (function () {
   }
 
   function render(root, rails) {
+    ensureRailLinkStyles();
     root.innerHTML = rails.map(rail).filter(Boolean).join("");
   }
 
