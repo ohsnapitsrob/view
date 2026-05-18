@@ -1,5 +1,6 @@
 (function () {
   function getRootPath() {
+    if (window.FTS?.Routes?.getRootPath) return window.FTS.Routes.getRootPath();
     if (document.body.dataset.navRoot) return document.body.dataset.navRoot;
 
     const path = window.location.pathname.replace(/\/+$/, "");
@@ -86,6 +87,41 @@
         box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
         backdrop-filter: blur(18px);
         -webkit-backdrop-filter: blur(18px);
+      }
+
+      .fts-bottom-nav a {
+        min-width: 0;
+        min-height: 54px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        border-radius: 18px;
+        color: #6b7280;
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.01em;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .fts-bottom-nav a[aria-current="page"] {
+        background: #111827;
+        color: #ffffff;
+      }
+
+      .fts-bottom-nav svg {
+        width: 22px;
+        height: 22px;
+        fill: currentColor;
+      }
+
+      @media (min-width: 900px) {
+        .fts-bottom-nav {
+          width: 420px;
+          bottom: 18px;
+        }
       }
     `;
 
