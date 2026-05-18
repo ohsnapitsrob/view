@@ -156,7 +156,8 @@ FTS.HomeV2Rails = (function () {
       subHeader: selectionSubHeader(allItems.length, items.length),
       items,
       href: "./national-trust/",
-      linkLabel: "Explore National Trust locations"
+      linkLabel: "Explore National Trust locations",
+      linkIcon: "chevron"
     };
   }
 
