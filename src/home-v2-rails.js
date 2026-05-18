@@ -17,6 +17,7 @@ FTS.HomeV2Rails = (function () {
         { title: "Films", href: "./films/" },
         { title: "Series", href: "./series/" },
         { title: "Music Videos", href: "./music-videos/" },
+        { title: "Games", href: "./games/" },
         { title: "National Trust", href: "./national-trust/" },
         { title: "Map", href: "./explore/" }
       ]
