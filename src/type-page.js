@@ -51,7 +51,7 @@
     if (document.getElementById("fts-type-page-fallback-style")) return;
     const style = document.createElement("style");
     style.id = "fts-type-page-fallback-style";
-    style.textContent = `.poster-fallback { width: auto; }`;
+    style.textContent = `.poster-fallback { width: auto; } .type-loading-stage { min-height: 260px; display: grid; place-items: center; }`;
     document.head.appendChild(style);
   }
   function posterCard(item) {
@@ -67,14 +67,30 @@
     if (window.FTS?.TitleVisibility?.visibleTitleKeys) return window.FTS.TitleVisibility.visibleTitleKeys();
     return null;
   }
+  function renderLoading() {
+    const shell = document.querySelector(".person-shell");
+    if (!shell) return;
+    shell.innerHTML = `<section class="type-loading-stage"><div class="fts-loader" aria-label="Loading"></div></section>`;
+  }
+  function renderReady(pageConfig, matches) {
+    const shell = document.querySelector(".person-shell");
+    if (!shell) return;
+    shell.innerHTML = `
+      <section class="person-hero">
+        <div class="person-hero-copy">
+          <p class="person-kicker">Type</p>
+          <h1 class="person-title" id="typeTitle">${pageConfig.label}</h1>
+          <p class="person-copy" id="typeCopy">${matches.length} title${matches.length === 1 ? "" : "s"} with scenes found.</p>
+        </div>
+      </section>
+      <section><div class="person-grid"><div id="typeGrid" class="person-grid-section">${matches.map(posterCard).join("")}</div></div></section>
+    `;
+  }
   async function boot() {
     const pageConfig = window.FTS_TYPE_PAGE;
     if (!pageConfig) return;
     ensureFallbackStyles();
-    const hero = document.querySelector(".person-hero");
-    const grid = document.getElementById("typeGrid");
-    if (hero) hero.hidden = true;
-    if (grid) grid.innerHTML = `<div class="fts-loader" aria-label="Loading"></div>`;
+    renderLoading();
     const [rows, visibleTitleKeys] = await Promise.all([fetchCSV(config.TITLE_METADATA_CSV), getVisibleTitleKeys()]);
     const typeKeys = getTypeKeys(pageConfig);
     const matches = rows
@@ -82,10 +98,7 @@
       .filter((row) => !visibleTitleKeys || visibleTitleKeys.has(key(getValue(row, "title"))))
       .sort((a, b) => norm(getValue(a, "title")).localeCompare(norm(getValue(b, "title"))));
     document.title = `${pageConfig.label} | Find That Scene`;
-    document.getElementById("typeTitle").textContent = pageConfig.label;
-    document.getElementById("typeCopy").textContent = `${matches.length} title${matches.length === 1 ? "" : "s"} with scenes found.`;
-    document.getElementById("typeGrid").innerHTML = matches.map(posterCard).join("");
-    if (hero) hero.hidden = false;
+    renderReady(pageConfig, matches);
   }
   boot();
 })();
