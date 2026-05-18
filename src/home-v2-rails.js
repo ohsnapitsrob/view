@@ -9,6 +9,27 @@ FTS.HomeV2Rails = (function () {
     return `${value} ${value === 1 ? single : pluralWord}`;
   }
 
+  function carouselRail(entries) {
+    if (!U.featureEnabled("homeRailCarouselEnabled")) return null;
+
+    const items = entries
+      .filter((entry) => U.norm(entry.carousel) !== "")
+      .map((entry) => ({
+        title: entry.title,
+        backdrop: U.safeUrl(entry.backdrop),
+        href: U.titleUrl(entry.title)
+      }))
+      .filter((entry) => entry.title && entry.backdrop);
+
+    if (!items.length) return null;
+
+    return {
+      title: "Featured",
+      variant: "carousel",
+      items
+    };
+  }
+
   function browseRail() {
     if (!U.featureEnabled("homeRailCategoriesEnabled")) return null;
 
@@ -161,6 +182,7 @@ FTS.HomeV2Rails = (function () {
 
   function build(context) {
     const entries = context.entries || [];
+    const carousel = carouselRail(entries);
     const latest = latestRail(entries);
     const topFilms = topUKRail(entries, "Film");
     const topSeries = topUKRail(entries, "TV");
@@ -176,7 +198,7 @@ FTS.HomeV2Rails = (function () {
       noAccessTitles: titleSet(entries.filter((entry) => entry.onlyNoAccess))
     };
 
-    return [browseRail(), latest, ...U.shuffle(randomRails), peopleRail(entries, context.peopleRows), gamesRail(entries)].filter(Boolean).map((rail) => ({ ...overlayContext, ...rail }));
+    return [carousel, browseRail(), latest, ...U.shuffle(randomRails), peopleRail(entries, context.peopleRows), gamesRail(entries)].filter(Boolean).map((rail) => ({ ...overlayContext, ...rail }));
   }
 
   return { build };
