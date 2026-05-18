@@ -57,6 +57,7 @@ FTS.HomeV2Renderer = (function () {
         scrollbar-width: none;
         -ms-overflow-style: none;
         padding-bottom: 4px;
+        scroll-snap-type: x mandatory;
       }
 
       .button-rail-row::-webkit-scrollbar {
@@ -80,6 +81,7 @@ FTS.HomeV2Renderer = (function () {
         justify-content: center;
         text-align: center;
         user-select: none;
+        scroll-snap-align: start;
       }
     `;
 
