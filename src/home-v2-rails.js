@@ -18,6 +18,13 @@ FTS.HomeV2Rails = (function () {
     return new Set((items || []).map((item) => U.key(item.title)));
   }
 
+  function genreUrl(genre, type) {
+    const params = new URLSearchParams();
+    params.set("genre", genre);
+    if (type) params.set("type", type);
+    return `./genre/?${params.toString()}`;
+  }
+
   function latestRail(entries) {
     if (!U.featureEnabled("homeRailLatestScenesEnabled")) return null;
 
@@ -108,6 +115,8 @@ FTS.HomeV2Rails = (function () {
         const key = `${genreKey}::${type}`;
         if (!map.has(key)) {
           map.set(key, {
+            genre,
+            type,
             title: `${genre} ${type === "Film" ? "Films" : "Series"}`,
             entries: []
           });
@@ -124,7 +133,10 @@ FTS.HomeV2Rails = (function () {
         return {
           title: group.title,
           subHeader: selectionSubHeader(group.entries.length, items.length),
-          items
+          items,
+          href: genreUrl(group.genre, group.type === "Film" ? "films" : "series"),
+          linkLabel: "View genre",
+          linkIcon: "chevron"
         };
       });
   }
