@@ -49,18 +49,25 @@ FTS.HomeV2Renderer = (function () {
         fill: currentColor;
       }
 
-      .button-rail {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      .button-rail-row {
+        display: flex;
         gap: 12px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding-bottom: 4px;
+      }
+
+      .button-rail-row::-webkit-scrollbar {
+        display: none;
       }
 
       .button-rail-link {
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        flex: 0 0 auto;
+        min-width: 160px;
         min-height: 68px;
-        padding: 16px;
+        padding: 16px 18px;
         border-radius: 18px;
         background: #ffffff;
         border: 1px solid rgba(229, 231, 235, 1);
@@ -68,7 +75,11 @@ FTS.HomeV2Renderer = (function () {
         color: #111827;
         text-decoration: none;
         font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         text-align: center;
+        user-select: none;
       }
     `;
 
@@ -128,7 +139,7 @@ FTS.HomeV2Renderer = (function () {
           </div>
         </div>
 
-        <div class="button-rail">
+        <div class="button-rail-row poster-row">
           ${railConfig.items.map((item) => `
             <a class="button-rail-link" href="${U.escapeHtml(item.href)}">
               ${U.escapeHtml(item.title)}
