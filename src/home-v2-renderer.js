@@ -48,6 +48,28 @@ FTS.HomeV2Renderer = (function () {
         display: block;
         fill: currentColor;
       }
+
+      .button-rail {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+      }
+
+      .button-rail-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 68px;
+        padding: 16px;
+        border-radius: 18px;
+        background: #ffffff;
+        border: 1px solid rgba(229, 231, 235, 1);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        color: #111827;
+        text-decoration: none;
+        font-weight: 700;
+        text-align: center;
+      }
     `;
 
     document.head.appendChild(style);
@@ -97,8 +119,32 @@ FTS.HomeV2Renderer = (function () {
     `;
   }
 
+  function buttonRail(railConfig) {
+    return `
+      <section class="rail">
+        <div class="rail-header">
+          <div>
+            <h2 class="rail-title">${U.escapeHtml(railConfig.title)}</h2>
+          </div>
+        </div>
+
+        <div class="button-rail">
+          ${railConfig.items.map((item) => `
+            <a class="button-rail-link" href="${U.escapeHtml(item.href)}">
+              ${U.escapeHtml(item.title)}
+            </a>
+          `).join("")}
+        </div>
+      </section>
+    `;
+  }
+
   function rail(railConfig) {
     if (!railConfig?.items?.length) return "";
+
+    if (railConfig.variant === "buttons") {
+      return buttonRail(railConfig);
+    }
 
     return `
       <section class="rail ${railConfig.className || ""}">
