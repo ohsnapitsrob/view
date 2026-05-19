@@ -97,6 +97,14 @@ FTS.TitleVisibility = (function () {
     return groups.flat();
   }
   async function visibleTitleKeys() {
+    if (window.FTS?.DataStore?.remember) {
+      return window.FTS.DataStore.remember("visible-title-keys", async () => {
+        const sceneRows = await loadSceneRows();
+        const visibleRows = window.FTS?.Visibility?.getVisibleScenes?.(sceneRows) || sceneRows;
+        return new Set(visibleRows.map((row) => key(row.title)).filter(Boolean));
+      });
+    }
+
     const sceneRows = await loadSceneRows();
     const visibleRows = window.FTS?.Visibility?.getVisibleScenes?.(sceneRows) || sceneRows;
     return new Set(visibleRows.map((row) => key(row.title)).filter(Boolean));
