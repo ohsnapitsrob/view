@@ -96,6 +96,26 @@
     });
   }
 
+  async function fetchMetadataRows() {
+    if (window.FTS?.DataStore?.getTitleMetadata) {
+      return window.FTS.DataStore.getTitleMetadata();
+    }
+
+    if (window.FTS?.DataStore?.csvRows) {
+      return window.FTS.DataStore.csvRows("title-metadata", config.TITLE_METADATA_CSV);
+    }
+
+    if (window.FTS?.DataCache?.fetchCSV) {
+      const result = await window.FTS.DataCache.fetchCSV(config.TITLE_METADATA_CSV);
+      return result.rows;
+    }
+
+    const response = await fetch(config.TITLE_METADATA_CSV, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Could not load CSV: ${config.TITLE_METADATA_CSV}`);
+
+    return rowsToObjects(parseCSV(await response.text()));
+  }
+
   async function fetchCSV(url) {
     if (!url) return [];
 
@@ -186,7 +206,7 @@
 
     try {
       const [metadata, peopleRows] = await Promise.all([
-        fetchCSV(config.TITLE_METADATA_CSV),
+        fetchMetadataRows(),
         fetchCSV(config.PEOPLE_CSV)
       ]);
 
