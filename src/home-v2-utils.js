@@ -77,6 +77,12 @@ FTS.HomeV2Utils = (function () {
 
   async function fetchRows(url) {
     if (!url) return [];
+
+    if (window.FTS?.DataCache?.fetchCSV) {
+      const result = await window.FTS.DataCache.fetchCSV(url);
+      return result.rows;
+    }
+
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`Failed to fetch CSV: ${url}`);
     return rowsToObjects(parseCSV(await response.text()));
