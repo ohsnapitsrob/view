@@ -43,6 +43,10 @@
     });
   }
   async function fetchCSV(url) {
+    if (window.FTS?.DataCache?.fetchCSV) {
+      const result = await window.FTS.DataCache.fetchCSV(url);
+      return result.rows;
+    }
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`Could not load ${url}`);
     return rowsToObjects(parseCSV(await response.text()));
