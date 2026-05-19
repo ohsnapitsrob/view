@@ -50,21 +50,13 @@ FTS.HomeV2 = (function () {
     const statsEl = document.getElementById("homeStats");
     if (!statsEl) return;
 
-    const titles = new Set();
-    const cities = new Set();
-    const countries = new Set();
-
-    context.visibleRows.forEach((row) => {
-      if (row.title) titles.add(row.title);
-      if (row.city) cities.add(row.city);
-      if (row.country) countries.add(row.country);
-    });
+    const counts = context.homepageCounts || {};
 
     statsEl.innerHTML = `
-      <article class="stat-card"><div class="stat-value">${formatNumber(context.visibleRows.length)}</div><div class="stat-label">Scenes</div></article>
-      <article class="stat-card"><div class="stat-value">${formatNumber(titles.size)}</div><div class="stat-label">Titles</div></article>
-      <article class="stat-card"><div class="stat-value">${formatNumber(cities.size)}</div><div class="stat-label">Cities</div></article>
-      <article class="stat-card"><div class="stat-value">${formatNumber(countries.size)}</div><div class="stat-label">Countries</div></article>
+      <article class="stat-card"><div class="stat-value">${formatNumber(counts.scenes)}</div><div class="stat-label">Scenes</div></article>
+      <article class="stat-card"><div class="stat-value">${formatNumber(counts.titles)}</div><div class="stat-label">Titles</div></article>
+      <article class="stat-card"><div class="stat-value">${formatNumber(counts.cities)}</div><div class="stat-label">Cities</div></article>
+      <article class="stat-card"><div class="stat-value">${formatNumber(counts.countries)}</div><div class="stat-label">Countries</div></article>
     `;
   }
 
