@@ -39,6 +39,23 @@ FTS.DataStore = (function () {
     return window.FTS?.Utils?.normalizeComparable ? window.FTS.Utils.normalizeComparable(value) : norm(value).toLowerCase();
   }
 
+  function coerceNumber(value) {
+    if (window.FTS?.Utils?.coerceNumber) return window.FTS.Utils.coerceNumber(value);
+    const number = Number((value ?? "").toString().trim());
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function normalizeType(value) {
+    if (window.FTS?.Utils?.normalizeType) return window.FTS.Utils.normalizeType(value);
+    return norm(value) || "Misc";
+  }
+
+  function parseVisitedDate(value) {
+    if (window.FTS?.Utils?.parseVisitedDate) return window.FTS.Utils.parseVisitedDate(value);
+    const timestamp = Date.parse(norm(value));
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+
   function visibilityMode() {
     return window.FTS?.Visibility?.mode?.() || "public-only";
   }
@@ -152,6 +169,53 @@ FTS.DataStore = (function () {
 
       const result = await window.FTS.DataCache.fetchCSV(url, options);
       return result.rows;
+    }, options);
+  }
+
+  function normalizeSceneRow(row, fallbackType) {
+    const lat = coerceNumber(row.lat);
+    const lng = coerceNumber(row.lng);
+    const title = norm(row.title);
+
+    if (!title || typeof lat !== "number" || typeof lng !== "number") return null;
+
+    return {
+      ...row,
+      title,
+      type: normalizeType(row.type || fallbackType),
+      series: norm(row.series),
+      place: norm(row.place),
+      city: norm(row.city || row.place),
+      country: norm(row.country),
+      lat,
+      lng,
+      description: norm(row.description),
+      thumbnail: norm(row.thumbnail),
+      access: getAccessValue(row),
+      railOrder: coerceNumber(row["set-rail-order"]),
+      visitedTs: parseVisitedDate(row["date-formatted"] || row["raw-date"] || row.visited || row["visit-date"]),
+      _raw: row
+    };
+  }
+
+  async function getSceneRows(options = {}) {
+    return remember("scene-rows", async () => {
+      const config = appConfig();
+      const sheets = config.SHEETS || {};
+      const sources = [
+        ["Film", sheets.movies, "scene-rows-films"],
+        ["TV", sheets.tv, "scene-rows-tv"],
+        ["Music Video", sheets.music_videos, "scene-rows-music-videos"],
+        ["Video Game", sheets.games, "scene-rows-games"],
+        ["Misc", sheets.misc, "scene-rows-misc"]
+      ].filter(([, url]) => Boolean(url));
+
+      const groups = await Promise.all(sources.map(async ([fallbackType, url, cacheKey]) => {
+        const rows = await csvRows(cacheKey, url, options);
+        return rows.map((row) => normalizeSceneRow(row, fallbackType)).filter(Boolean);
+      }));
+
+      return groups.flat();
     }, options);
   }
 
@@ -292,6 +356,7 @@ FTS.DataStore = (function () {
     clear,
     remember,
     csvRows,
+    getSceneRows,
     getTitleMetadata,
     getTitleMetadataMap,
     getTitleTypes,
