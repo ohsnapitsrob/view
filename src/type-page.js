@@ -42,6 +42,30 @@
       return obj;
     });
   }
+  function scriptBase() {
+    return window.location.pathname.replace(/\/+$/, "").split("/").length > 2 ? "../src/" : "./src/";
+  }
+  function loadScriptOnce(name, attribute) {
+    if (document.querySelector(`script[${attribute}]`)) return Promise.resolve();
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = `${scriptBase()}${name}`;
+      script.async = false;
+      script.defer = false;
+      script.setAttribute(attribute, "true");
+      script.onload = resolve;
+      script.onerror = resolve;
+      document.head.appendChild(script);
+    });
+  }
+  async function ensureScenePackHelpers() {
+    if (!window.FTS?.DataStore) {
+      await loadScriptOnce("data-store.js", "data-fts-type-data-store");
+    }
+    if (!window.FTS?.DataStore?.getScenePacks) {
+      await loadScriptOnce("scene-packs.js", "data-fts-type-scene-packs");
+    }
+  }
   async function fetchMetadataRows() {
     if (window.FTS?.DataStore?.getTitleMetadata) {
       return window.FTS.DataStore.getTitleMetadata();
@@ -121,6 +145,7 @@
     if (!pageConfig) return;
     ensureFallbackStyles();
     renderLoading();
+    await ensureScenePackHelpers();
     const [rows, visibleTitleKeys] = await Promise.all([fetchMetadataRows(), getVisibleTitleKeys()]);
     const typeKeys = getTypeKeys(pageConfig);
     const matches = rows
