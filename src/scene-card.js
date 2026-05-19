@@ -5,14 +5,23 @@ FTS.SceneCard = (function () {
     escapeHtml,
     safeUrl,
     normalizeRating,
-    hasNoAccess
+    hasNoAccess,
+    splitComma
   } = FTS.Utils;
 
   const NT_ICON_URL = (window.APP_CONFIG && window.APP_CONFIG.NT_ICON_URL)
     || "https://images.pixieset.com/063553411/79737b7a99cf1e6442ac14468460ebc1-xxlarge.png";
 
+  function ratingValues(row) {
+    if (Array.isArray(row.rating)) return row.rating;
+    if (typeof row.rating === "string") {
+      return splitComma ? splitComma(row.rating) : row.rating.split(",").map((value) => value.trim()).filter(Boolean);
+    }
+    return [];
+  }
+
   function ratingDotsHtml(row) {
-    const ratings = (row.rating || [])
+    const ratings = ratingValues(row)
       .map(normalizeRating)
       .filter(Boolean)
       .filter((rating, index, arr) => arr.indexOf(rating) === index);
