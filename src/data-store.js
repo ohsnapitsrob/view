@@ -32,11 +32,11 @@ FTS.DataStore = (function () {
   }
 
   function norm(value) {
-    return (value || "").toString().trim();
+    return window.FTS?.Utils?.norm ? window.FTS.Utils.norm(value) : (value || "").toString().trim();
   }
 
   function key(value) {
-    return norm(value).toLowerCase();
+    return window.FTS?.Utils?.normalizeComparable ? window.FTS.Utils.normalizeComparable(value) : norm(value).toLowerCase();
   }
 
   function visibilityMode() {
@@ -142,8 +142,12 @@ FTS.DataStore = (function () {
 
   async function csvRows(keyName, url, options = {}) {
     return remember(keyName, async () => {
+      if (window.FTS?.CSV?.fetchObjects) {
+        return window.FTS.CSV.fetchObjects(url, options);
+      }
+
       if (!window.FTS?.DataCache?.fetchCSV) {
-        throw new Error("FTS.DataCache.fetchCSV is required before DataStore.csvRows can be used.");
+        throw new Error("FTS.CSV.fetchObjects or FTS.DataCache.fetchCSV is required before DataStore.csvRows can be used.");
       }
 
       const result = await window.FTS.DataCache.fetchCSV(url, options);
