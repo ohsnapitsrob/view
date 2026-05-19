@@ -7,12 +7,19 @@ const vm = require("vm");
 const root = path.resolve(__dirname, "..");
 const failures = [];
 
+const generatedOrExternalLocalScripts = new Set([
+  "runtime-config.js",
+  "../runtime-config.js",
+  "./runtime-config.js"
+]);
+
 function walk(dir) {
   if (!fs.existsSync(dir)) return [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 
   return entries.flatMap((entry) => {
     const full = path.join(dir, entry.name);
+
     if (entry.isDirectory()) {
       if ([".git", "node_modules"].includes(entry.name)) return [];
       return walk(full);
@@ -31,6 +38,7 @@ function checkJsSyntax() {
 
   jsFiles.forEach((file) => {
     const rel = relative(file);
+
     try {
       new vm.Script(fs.readFileSync(file, "utf8"), { filename: rel });
     } catch (err) {
@@ -51,6 +59,11 @@ function scriptSrcs(html) {
   return srcs;
 }
 
+function isGeneratedScript(src) {
+  const cleaned = src.split("?")[0].split("#")[0];
+  return generatedOrExternalLocalScripts.has(cleaned) || cleaned.endsWith("/runtime-config.js");
+}
+
 function checkHtmlScriptPaths() {
   const htmlFiles = walk(root).filter((file) => file.endsWith(".html"));
 
@@ -61,6 +74,7 @@ function checkHtmlScriptPaths() {
 
     scriptSrcs(html)
       .filter((src) => !/^https?:\/\//i.test(src))
+      .filter((src) => !isGeneratedScript(src))
       .forEach((src) => {
         const cleaned = src.split("?")[0].split("#")[0];
         const resolved = path.resolve(dir, cleaned);
@@ -92,15 +106,37 @@ function checkNoKnownBrokenPattern() {
   if (!fs.existsSync(sceneCard)) return;
 
   const text = fs.readFileSync(sceneCard, "utf8");
+
   if (text.includes("(row.rating || []).map")) {
     failures.push("src/scene-card.js still contains unsafe rating map pattern.");
   }
+}
+
+function checkNoDuplicateCsvParsersInMigratedFiles() {
+  [
+    "national-trust/national-trust.js",
+    "genre/genre.js",
+    "person/person.js",
+    "stats/stats.js",
+    "src/type-page.js",
+    "src/app-header-title-search.js"
+  ].forEach((rel) => {
+    const file = path.join(root, rel);
+    if (!fs.existsSync(file)) return;
+
+    const text = fs.readFileSync(file, "utf8");
+
+    if (/function\s+parseCSV/.test(text) || /function\s+rowsToObjects/.test(text)) {
+      failures.push(`${rel} still contains local CSV parsing.`);
+    }
+  });
 }
 
 checkJsSyntax();
 checkHtmlScriptPaths();
 checkRequiredCoreFiles();
 checkNoKnownBrokenPattern();
+checkNoDuplicateCsvParsersInMigratedFiles();
 
 if (failures.length) {
   console.error("\nProject checks failed:\n");
