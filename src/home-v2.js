@@ -42,6 +42,27 @@ FTS.HomeV2 = (function () {
     window.addEventListener("fts:privacy-updated", callback, { once: true });
   }
 
+  function waitForShellDependencies(callback) {
+    if (window.FTS?.AppSettings && window.FTS?.Visibility) {
+      callback();
+      return;
+    }
+
+    const startedAt = Date.now();
+    const interval = window.setInterval(() => {
+      if (window.FTS?.AppSettings && window.FTS?.Visibility) {
+        window.clearInterval(interval);
+        callback();
+        return;
+      }
+
+      if (Date.now() - startedAt > 2500) {
+        window.clearInterval(interval);
+        callback();
+      }
+    }, 25);
+  }
+
   function formatNumber(value) {
     return Number(value || 0).toLocaleString();
   }
@@ -110,7 +131,9 @@ FTS.HomeV2 = (function () {
   }
 
   function boot() {
-    waitForPrivacyChoice(init);
+    waitForShellDependencies(() => {
+      waitForPrivacyChoice(init);
+    });
 
     window.addEventListener("fts:app-settings-updated", rebuildHomepageDatasets);
   }
