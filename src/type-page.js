@@ -43,6 +43,9 @@
     });
   }
   async function fetchCSV(url) {
+    if (window.FTS?.DataStore?.csvRows) {
+      return window.FTS.DataStore.csvRows("title-metadata", url);
+    }
     if (window.FTS?.DataCache?.fetchCSV) {
       const result = await window.FTS.DataCache.fetchCSV(url);
       return result.rows;
