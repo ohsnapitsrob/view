@@ -1,6 +1,8 @@
 window.FTS = window.FTS || {};
 
 FTS.DataStore = (function () {
+  const DATASET_CACHE_VERSION = "v1";
+  const DATASET_CACHE_PREFIX = "fts:dataset";
   const store = new Map();
   const pending = new Map();
   const metadata = new Map();
@@ -64,6 +66,97 @@ FTS.DataStore = (function () {
     return `${baseKey}:${visibilityMode()}`;
   }
 
+  function hourlyBucket(date = new Date()) {
+    return date.toISOString().slice(0, 13);
+  }
+
+  function storageAvailable() {
+    try {
+      const testKey = `${DATASET_CACHE_PREFIX}:test`;
+      sessionStorage.setItem(testKey, "1");
+      sessionStorage.removeItem(testKey);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function datasetStorageKey(keyName, bucket = hourlyBucket()) {
+    return `${DATASET_CACHE_PREFIX}:${DATASET_CACHE_VERSION}:${bucket}:${encodeURIComponent(keyName)}`;
+  }
+
+  function serializeDataset(value) {
+    return JSON.stringify(value, (itemKey, itemValue) => {
+      if (itemValue instanceof Set) {
+        return { __ftsDatasetType: "Set", values: Array.from(itemValue) };
+      }
+
+      if (itemValue instanceof Map) {
+        return { __ftsDatasetType: "Map", values: Array.from(itemValue.entries()) };
+      }
+
+      return itemValue;
+    });
+  }
+
+  function deserializeDataset(text) {
+    return JSON.parse(text, (itemKey, itemValue) => {
+      if (itemValue && itemValue.__ftsDatasetType === "Set") {
+        return new Set(itemValue.values || []);
+      }
+
+      if (itemValue && itemValue.__ftsDatasetType === "Map") {
+        return new Map(itemValue.values || []);
+      }
+
+      return itemValue;
+    });
+  }
+
+  function readPersistentDataset(keyName, options = {}) {
+    if (options.persist !== true || options.force === true || !storageAvailable()) return null;
+
+    const storageKey = datasetStorageKey(keyName);
+
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (!raw) return null;
+      const value = deserializeDataset(raw);
+      log("session hit", { key: keyName, storageKey }, options);
+      return value;
+    } catch (err) {
+      sessionStorage.removeItem(storageKey);
+      return null;
+    }
+  }
+
+  function writePersistentDataset(keyName, value, options = {}) {
+    if (options.persist !== true || !storageAvailable()) return;
+
+    const storageKey = datasetStorageKey(keyName);
+
+    try {
+      sessionStorage.setItem(storageKey, serializeDataset(value));
+      log("session stored", { key: keyName, storageKey }, options);
+    } catch (err) {
+      log("session store skipped", { key: keyName, reason: err?.message || "storage failed" }, options);
+    }
+  }
+
+  function clearPersistentDataset(keyName) {
+    if (!storageAvailable()) return;
+
+    try {
+      Object.keys(sessionStorage).forEach((storageKey) => {
+        const matchesPrefix = storageKey.startsWith(`${DATASET_CACHE_PREFIX}:${DATASET_CACHE_VERSION}:`);
+        const matchesKey = typeof keyName !== "string" || storageKey.endsWith(`:${encodeURIComponent(keyName)}`);
+        if (matchesPrefix && matchesKey) sessionStorage.removeItem(storageKey);
+      });
+    } catch (err) {
+      // Persistent dataset cache clearing should never block the app.
+    }
+  }
+
   function getAccessValue(row) {
     return norm(
       row?.access ||
@@ -110,6 +203,7 @@ FTS.DataStore = (function () {
       store.delete(keyName);
       metadata.delete(keyName);
       pending.delete(keyName);
+      clearPersistentDataset(keyName);
 
       log("cleared dataset", { key: keyName });
       return;
@@ -118,6 +212,7 @@ FTS.DataStore = (function () {
     store.clear();
     metadata.clear();
     pending.clear();
+    clearPersistentDataset();
 
     log("cleared all datasets");
   }
@@ -126,6 +221,15 @@ FTS.DataStore = (function () {
     if (has(keyName) && options.force !== true) {
       log("memory hit", { key: keyName });
       return get(keyName);
+    }
+
+    const persisted = readPersistentDataset(keyName, options);
+    if (persisted !== null) {
+      set(keyName, persisted, {
+        fromSession: true,
+        mode: visibilityMode()
+      });
+      return persisted;
     }
 
     if (pending.has(keyName) && options.force !== true) {
@@ -143,8 +247,11 @@ FTS.DataStore = (function () {
 
         set(keyName, value, {
           buildMs: Math.round(performance.now() - startedAt),
-          mode: visibilityMode()
+          mode: visibilityMode(),
+          persisted: options.persist === true
         });
+
+        writePersistentDataset(keyName, value, options);
 
         return value;
       } finally {
@@ -216,7 +323,7 @@ FTS.DataStore = (function () {
       }));
 
       return groups.flat();
-    }, options);
+    }, { ...options, persist: true });
   }
 
   async function getTitleMetadata(options = {}) {
