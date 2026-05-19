@@ -96,7 +96,7 @@ FTS.TitleVisibility = (function () {
         const sceneRows = await loadSceneRows();
         const visibleRows = window.FTS?.Visibility?.getVisibleScenes?.(sceneRows) || sceneRows;
         return new Set(visibleRows.map((row) => key(row.title)).filter(Boolean));
-      });
+      }, { persist: true });
     }
 
     if (window.FTS?.DataStore?.getScenePacks) {
