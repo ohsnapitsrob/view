@@ -51,6 +51,7 @@ FTS.HomeV2Data = (function () {
       const rows = window.FTS?.DataStore?.csvRows
         ? await window.FTS.DataStore.csvRows(cacheKey, url)
         : await U.fetchRows(url);
+
       return rows.map((row) => {
         const title = U.norm(row.title);
         const lat = U.coerceNumber(row.lat);
@@ -80,6 +81,7 @@ FTS.HomeV2Data = (function () {
     const grouped = new Map();
     const inaccessibleTitleKeys = visibility?.inaccessibleTitleKeys || new Set();
     const visibleTitleKeys = visibility?.visibleTitleKeys || new Set();
+    const hideNoAccess = window.FTS?.Visibility?.hideNoAccessEnabled?.() === true;
 
     sceneRows.forEach((row) => {
       const titleKey = U.key(row.title);
@@ -126,11 +128,16 @@ FTS.HomeV2Data = (function () {
         ...entry,
         onlyNoAccess
       };
-    }).filter((entry) => !entry.onlyNoAccess || !window.FTS?.Visibility?.hideNoAccessEnabled?.());
+    }).filter((entry) => !(hideNoAccess && entry.onlyNoAccess));
   }
 
   function buildDerivedDatasets(entries, visibleRows, metadataRows) {
-    const visibleTitles = entries.filter((entry) => !entry.onlyNoAccess);
+    const hideNoAccess = window.FTS?.Visibility?.hideNoAccessEnabled?.() === true;
+
+    const visibleTitles = hideNoAccess
+      ? entries.filter((entry) => !entry.onlyNoAccess)
+      : entries;
+
     const byCountDesc = [...visibleTitles].sort((a, b) => b.visibleCount - a.visibleCount || a.title.localeCompare(b.title));
     const byLatestDesc = [...visibleTitles].sort((a, b) => (b.latestVisitedTs || 0) - (a.latestVisitedTs || 0) || a.title.localeCompare(b.title));
     const featuredTitles = U.shuffle(visibleTitles.filter((entry) => entry.carousel && entry.backdrop));
