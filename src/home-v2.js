@@ -89,8 +89,19 @@ FTS.HomeV2 = (function () {
     }
   }
 
+  function rebuildHomepageDatasets() {
+    if (window.FTS?.DataStore?.clear) {
+      window.FTS.DataStore.clear("homepage-datasets");
+      window.FTS.DataStore.clear("visibility-datasets");
+    }
+
+    init();
+  }
+
   function boot() {
     waitForPrivacyChoice(init);
+
+    window.addEventListener("fts:app-settings-updated", rebuildHomepageDatasets);
   }
 
   if (document.readyState === "loading") {
