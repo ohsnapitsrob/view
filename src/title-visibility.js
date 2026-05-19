@@ -46,8 +46,18 @@ FTS.TitleVisibility = (function () {
       return obj;
     }).filter((row) => Object.values(row).some((value) => norm(value) !== ""));
   }
-  async function fetchRows(url) {
+  async function fetchRows(cacheKey, url) {
     if (!url) return [];
+
+    if (window.FTS?.DataStore?.csvRows) {
+      return window.FTS.DataStore.csvRows(cacheKey, url);
+    }
+
+    if (window.FTS?.DataCache?.fetchCSV) {
+      const result = await window.FTS.DataCache.fetchCSV(url);
+      return result.rows;
+    }
+
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) return [];
     return rowsToObjects(parseCSV(await response.text()));
@@ -64,14 +74,14 @@ FTS.TitleVisibility = (function () {
     const cfg = window.APP_CONFIG || {};
     const sheets = cfg.SHEETS || {};
     const sources = [
-      ["Film", sheets.movies],
-      ["TV", sheets.tv],
-      ["Music Video", sheets.music_videos],
-      ["Video Game", sheets.games],
-      ["Misc", sheets.misc]
+      ["Film", sheets.movies, "scene-rows-films"],
+      ["TV", sheets.tv, "scene-rows-tv"],
+      ["Music Video", sheets.music_videos, "scene-rows-music-videos"],
+      ["Video Game", sheets.games, "scene-rows-games"],
+      ["Misc", sheets.misc, "scene-rows-misc"]
     ].filter(([, url]) => Boolean(url));
-    const groups = await Promise.all(sources.map(async ([fallbackType, url]) => {
-      const rows = await fetchRows(url);
+    const groups = await Promise.all(sources.map(async ([fallbackType, url, cacheKey]) => {
+      const rows = await fetchRows(cacheKey, url);
       return rows.map((row) => {
         const title = norm(getValue(row, "title"));
         const lat = coerceNumber(getValue(row, "lat"));
