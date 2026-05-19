@@ -185,6 +185,25 @@ FTS.DataStore = (function () {
     }, options);
   }
 
+  async function getHomepageDatasets(builder, options = {}) {
+    return remember("homepage-datasets", async () => {
+      if (typeof builder !== "function") {
+        throw new Error("FTS.DataStore.getHomepageDatasets requires a builder function.");
+      }
+
+      const result = await builder();
+
+      return {
+        featuredTitles: result.featuredTitles || [],
+        latestTitles: result.latestTitles || [],
+        topTitles: result.topTitles || [],
+        collectionRails: result.collectionRails || [],
+        nationalTrustRails: result.nationalTrustRails || [],
+        homepageCounts: result.homepageCounts || {}
+      };
+    }, options);
+  }
+
   function snapshot() {
     return {
       keys: Array.from(store.keys()),
@@ -206,6 +225,7 @@ FTS.DataStore = (function () {
     getTitleMetadataMap,
     getTitleTypes,
     getExploreSearchIndexes,
+    getHomepageDatasets,
     snapshot
   };
 })();
