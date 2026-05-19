@@ -122,6 +122,28 @@ FTS.HomeV2Data = (function () {
     }));
   }
 
+  function buildDerivedDatasets(entries, visibleRows, metadataRows) {
+    const visibleTitles = entries.filter((entry) => !entry.onlyNoAccess);
+    const byCountDesc = [...visibleTitles].sort((a, b) => b.visibleCount - a.visibleCount || a.title.localeCompare(b.title));
+    const byLatestDesc = [...visibleTitles].sort((a, b) => (b.latestVisitedTs || 0) - (a.latestVisitedTs || 0) || a.title.localeCompare(b.title));
+    const featuredTitles = U.shuffle(visibleTitles.filter((entry) => entry.carousel && entry.backdrop));
+
+    return {
+      featuredTitles,
+      latestTitles: byLatestDesc.slice(0, 20),
+      topTitles: byCountDesc.slice(0, 20),
+      collectionRails: [],
+      nationalTrustRails: [],
+      homepageCounts: {
+        scenes: visibleRows.length,
+        titles: visibleTitles.length,
+        metadataTitles: metadataRows.length,
+        countries: new Set(visibleRows.map((row) => U.key(row.country)).filter(Boolean)).size,
+        cities: new Set(visibleRows.map((row) => U.key(row.city)).filter(Boolean)).size
+      }
+    };
+  }
+
   async function buildHomepageData() {
     const [sceneRows, metadataRows, peopleRows] = await Promise.all([
       loadSceneRows(),
@@ -130,13 +152,16 @@ FTS.HomeV2Data = (function () {
     ]);
 
     const visibleRows = window.FTS?.Visibility?.getVisibleScenes?.(sceneRows) || sceneRows;
+    const entries = buildEntries(visibleRows, metadataRows);
+    const derived = buildDerivedDatasets(entries, visibleRows, metadataRows);
 
     return {
       sceneRows,
       visibleRows,
       metadataRows,
       peopleRows,
-      entries: buildEntries(visibleRows, metadataRows)
+      entries,
+      ...derived
     };
   }
 
