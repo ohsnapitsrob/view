@@ -39,6 +39,14 @@ FTS.DataStore = (function () {
     return norm(value).toLowerCase();
   }
 
+  function visibilityMode() {
+    return window.FTS?.Visibility?.mode?.() || "public-only";
+  }
+
+  function modeKey(baseKey) {
+    return `${baseKey}:${visibilityMode()}`;
+  }
+
   function getAccessValue(row) {
     return norm(
       row?.access ||
@@ -112,12 +120,13 @@ FTS.DataStore = (function () {
 
     const promise = (async () => {
       try {
-        log("building dataset", { key: keyName });
+        log("building dataset", { key: keyName, mode: visibilityMode() });
 
         const value = await loader();
 
         set(keyName, value, {
-          buildMs: Math.round(performance.now() - startedAt)
+          buildMs: Math.round(performance.now() - startedAt),
+          mode: visibilityMode()
         });
 
         return value;
@@ -181,7 +190,7 @@ FTS.DataStore = (function () {
   }
 
   async function getExploreSearchIndexes(builder, options = {}) {
-    return remember("explore-search-indexes", async () => {
+    return remember(modeKey("explore-search-indexes"), async () => {
       if (typeof builder !== "function") {
         throw new Error("FTS.DataStore.getExploreSearchIndexes requires a builder function.");
       }
@@ -199,7 +208,7 @@ FTS.DataStore = (function () {
   }
 
   async function getHomepageDatasets(builder, options = {}) {
-    return remember("homepage-datasets", async () => {
+    return remember(modeKey("homepage-datasets"), async () => {
       if (typeof builder !== "function") {
         throw new Error("FTS.DataStore.getHomepageDatasets requires a builder function.");
       }
@@ -218,13 +227,14 @@ FTS.DataStore = (function () {
         topTitles: result.topTitles || [],
         collectionRails: result.collectionRails || [],
         nationalTrustRails: result.nationalTrustRails || [],
-        homepageCounts: result.homepageCounts || {}
+        homepageCounts: result.homepageCounts || {},
+        visibilityMode: visibilityMode()
       };
     }, options);
   }
 
   async function getVisibilityDatasets(sceneRowsOrBuilder, options = {}) {
-    return remember("visibility-datasets", async () => {
+    return remember(modeKey("visibility-datasets"), async () => {
       const sceneRows = typeof sceneRowsOrBuilder === "function"
         ? await sceneRowsOrBuilder()
         : (sceneRowsOrBuilder || []);
@@ -238,6 +248,7 @@ FTS.DataStore = (function () {
       const demolishedTitleKeys = new Set(demolishedScenes.map((row) => key(row.title)).filter(Boolean));
 
       return {
+        mode: visibilityMode(),
         sceneRows,
         visibleScenes,
         hiddenScenes,
@@ -283,6 +294,8 @@ FTS.DataStore = (function () {
     getExploreSearchIndexes,
     getHomepageDatasets,
     getVisibilityDatasets,
+    visibilityMode,
+    modeKey,
     snapshot
   };
 })();
