@@ -1,229 +1,136 @@
 (function () {
-  const config = window.APP_CONFIG || {};
+  const titleEl = document.getElementById("personTitle");
+  const copyEl = document.getElementById("personCopy");
+  const contentEl = document.getElementById("personContent");
 
-  function normalise(value) {
-    return (value || "").toString().trim();
+  function norm(value) {
+    return window.FTS?.Utils?.norm ? window.FTS.Utils.norm(value) : (value || "").toString().trim();
   }
 
-  function normaliseKey(value) {
-    return normalise(value).toLowerCase();
+  function key(value) {
+    return window.FTS?.Utils?.normalizeComparable ? window.FTS.Utils.normalizeComparable(value) : norm(value).toLowerCase();
   }
 
-  function getValue(row, key) {
-    const target = normaliseKey(key);
-    const matchedKey = Object.keys(row).find((rowKey) => normaliseKey(rowKey) === target);
-    return matchedKey ? row[matchedKey] : "";
+  function escapeHtml(value) {
+    return window.FTS?.Utils?.escapeHtml ? window.FTS.Utils.escapeHtml(value) : norm(value);
   }
 
-  function splitList(value) {
-    return normalise(value)
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+  function splitComma(value) {
+    return window.FTS?.Utils?.splitComma ? window.FTS.Utils.splitComma(value) : norm(value).split(",").map(norm).filter(Boolean);
   }
 
-  function normaliseType(value) {
-    const type = normaliseKey(value);
-
-    if (type === "film" || type === "movie" || type === "movies") return "movies";
-    if (type === "tv" || type === "tv show" || type === "tv shows" || type === "series") return "tv";
-
-    return "other";
+  function redirectTo404(reason, value = "") {
+    const params = new URLSearchParams();
+    params.set("person-error", reason);
+    if (value) params.set("value", value);
+    window.location.replace(`../404.html?${params.toString()}`);
   }
 
-  function sectionLabel(key) {
-    if (key === "movies") return "Films";
-    if (key === "tv") return "Series";
-    return "Other";
+  function getParamNames() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      star: norm(params.get("star")),
+      director: norm(params.get("director")),
+      person: norm(params.get("person")),
+      q: norm(params.get("q"))
+    };
   }
 
-  function parseCSV(text) {
-    const rows = [];
-    let row = [];
-    let current = "";
-    let inQuotes = false;
+  function requestedPerson() {
+    const names = getParamNames();
+    return names.star || names.director || names.person || names.q;
+  }
 
-    for (let i = 0; i < text.length; i++) {
-      const character = text[i];
-      const next = text[i + 1];
+  function requestedMode() {
+    const names = getParamNames();
+    if (names.director) return "director";
+    if (names.star) return "star";
+    return "person";
+  }
 
-      if (character === '"' && inQuotes && next === '"') {
-        current += '"';
-        i++;
-        continue;
-      }
+  function titleMatchesPerson(meta, personName, mode) {
+    const wanted = key(personName);
 
-      if (character === '"') {
-        inQuotes = !inQuotes;
-        continue;
-      }
-
-      if (character === "," && !inQuotes) {
-        row.push(current);
-        current = "";
-        continue;
-      }
-
-      if ((character === "\n" || character === "\r") && !inQuotes) {
-        if (character === "\r" && next === "\n") i++;
-        row.push(current);
-        current = "";
-        if (row.length > 1 || row[0] !== "") rows.push(row);
-        row = [];
-        continue;
-      }
-
-      current += character;
+    if (mode === "director") {
+      return splitComma(meta.Director || meta.director).some((name) => key(name) === wanted);
     }
 
-    row.push(current);
-    if (row.length > 1 || row[0] !== "") rows.push(row);
+    if (mode === "star") {
+      return splitComma(meta.Stars || meta.stars).some((name) => key(name) === wanted);
+    }
 
-    return rows;
+    return (
+      splitComma(meta.Stars || meta.stars).some((name) => key(name) === wanted) ||
+      splitComma(meta.Director || meta.director).some((name) => key(name) === wanted)
+    );
   }
 
-  function rowsToObjects(rows) {
-    if (!rows.length) return [];
-
-    const headers = rows[0].map(normalise);
-
-    return rows.slice(1).map((row) => {
-      const obj = {};
-      headers.forEach((header, index) => {
-        obj[header] = row[index] || "";
-      });
-      return obj;
-    });
-  }
-
-  async function fetchCSV(url) {
-    if (!url) return [];
-
-    const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) throw new Error(`Could not load CSV: ${url}`);
-
-    return rowsToObjects(parseCSV(await response.text()));
-  }
-
-  function redirectTo404(reason) {
-    const params = new URLSearchParams();
-    params.set("env-guard", reason || "person");
-    window.location.replace(`/404.html?${params.toString()}`);
-  }
-
-  function posterCard(item) {
-    const title = normalise(getValue(item, "title"));
-    const poster = normalise(getValue(item, "poster"));
-
-    if (!title) return "";
+  function posterCard(meta) {
+    const title = norm(meta.title);
+    const poster = norm(meta.poster);
 
     return `
-      <a class="person-card" href="../title/?fl=${encodeURIComponent(title)}" aria-label="${title}">
+      <a class="person-card" href="../title/?fl=${encodeURIComponent(title)}" aria-label="${escapeHtml(title)}">
         <div class="poster-card">
-          ${poster
-            ? `<img src="${poster}" alt="${title}" loading="lazy">`
-            : `<div class="poster-fallback">${title}</div>`}
+          ${poster ? `<img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy">` : `<div class="poster-fallback">${escapeHtml(title)}</div>`}
         </div>
       </a>
     `;
   }
 
-  function renderGroupedPosters(grid, matches) {
-    const groups = new Map([
-      ["movies", []],
-      ["tv", []],
-      ["other", []]
-    ]);
+  async function visibleTitleKeys() {
+    if (window.FTS?.DataStore?.getScenePacks) {
+      const scenePacks = await window.FTS.DataStore.getScenePacks();
+      const hideNoAccess = window.FTS?.Visibility?.hideNoAccessEnabled?.() === true;
+      return hideNoAccess ? scenePacks.publicTitleKeys : scenePacks.allTitleKeys;
+    }
 
-    matches.forEach((item) => {
-      const title = normalise(getValue(item, "title"));
-      if (!title) return;
-
-      const groupKey = normaliseType(getValue(item, "type"));
-      groups.get(groupKey).push(item);
-    });
-
-    const sections = Array.from(groups.entries())
-      .map(([key, items]) => ({
-        key,
-        title: sectionLabel(key),
-        items: items.sort((a, b) => normalise(getValue(a, "title")).localeCompare(normalise(getValue(b, "title"))))
-      }))
-      .filter((section) => section.items.length > 0)
-      .sort((a, b) => b.items.length - a.items.length || a.title.localeCompare(b.title));
-
-    const showSectionTitles = sections.length > 1;
-
-    grid.innerHTML = sections.map((section) => `
-      <section class="person-section">
-        ${showSectionTitles ? `<h2 class="person-section-title">${section.title}</h2>` : ""}
-        <div class="person-grid-section">
-          ${section.items.map(posterCard).join("")}
-        </div>
-      </section>
-    `).join("");
+    return null;
   }
 
-  async function boot() {
-    const params = new URLSearchParams(window.location.search);
-    const star = params.get("star");
-    const director = params.get("director");
+  async function init() {
+    await window.FTS?.Boot?.ready?.({ scenePacks: true, titleDatasets: true });
 
-    if ((!star && !director) || (star && director)) {
-      redirectTo404("person");
+    const person = requestedPerson();
+    const mode = requestedMode();
+
+    if (!person) {
+      redirectTo404("missing-person-param");
       return;
     }
 
-    const mode = star ? "star" : "director";
-    const label = normalise(star || director);
-    const target = normaliseKey(label);
-    const field = mode === "star" ? "Stars" : "Director";
+    titleEl.textContent = person;
+    document.title = `${person} | Find That Scene`;
 
     try {
-      const [metadata, peopleRows] = await Promise.all([
-        fetchCSV(config.TITLE_METADATA_CSV),
-        fetchCSV(config.PEOPLE_CSV)
+      const [metadataRows, titleKeys] = await Promise.all([
+        window.FTS.DataStore.getTitleMetadata(),
+        visibleTitleKeys()
       ]);
 
-      const matches = metadata.filter((item) => {
-        return splitList(getValue(item, field))
-          .map(normaliseKey)
-          .includes(target);
-      });
+      const matches = metadataRows
+        .filter((meta) => titleMatchesPerson(meta, person, mode))
+        .filter((meta) => !titleKeys || titleKeys.has(key(meta.title)))
+        .sort((a, b) => norm(a.title).localeCompare(norm(b.title), undefined, { sensitivity: "base" }));
 
-      if (!matches.length) {
-        redirectTo404("person");
-        return;
-      }
+      copyEl.textContent = `${matches.length} connected title${matches.length === 1 ? "" : "s"} with scenes found.`;
 
-      const personEntry = peopleRows.find((row) => {
-        return normaliseKey(getValue(row, "name")) === target;
-      });
-
-      const personPhoto = normalise(getValue(personEntry || {}, "photo"));
-
-      if (personPhoto) {
-        const photoContainer = document.getElementById("personPhoto");
-
-        photoContainer.classList.add("is-visible");
-        photoContainer.innerHTML = `<img src="${personPhoto}" alt="${label}" loading="eager">`;
-      }
-
-      document.title = `${label} | Find That Scene`;
-
-      const kicker = document.getElementById("personKicker");
-      if (kicker) kicker.remove();
-
-      document.getElementById("personTitle").textContent = label;
-      document.getElementById("personCopy").textContent = `Involved in ${matches.length} title${matches.length === 1 ? "" : "s"} with scenes found.`;
-
-      const grid = document.getElementById("personGrid");
-      renderGroupedPosters(grid, matches);
-    } catch (error) {
-      console.error(error);
-      redirectTo404("person");
+      contentEl.innerHTML = matches.length
+        ? `
+          <section>
+            <h2 class="person-section-title">Titles</h2>
+            <div class="person-grid-section">
+              ${matches.map(posterCard).join("")}
+            </div>
+          </section>
+        `
+        : `<div class="poster-fallback">No matches</div>`;
+    } catch (err) {
+      console.error(err);
+      copyEl.textContent = "Could not load this person.";
+      contentEl.innerHTML = "";
     }
   }
 
-  boot();
+  init();
 })();

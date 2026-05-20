@@ -13,6 +13,7 @@
   <script src="./src/feature-toggles.js"></script>
   <script src="./src/site-content.js"></script>
   <script src="./src/app-shell.js"></script>
+  <script src="./src/boot.js"></script>
 </head>
 <body>
   <noscript>
@@ -31,25 +32,10 @@
       <h2 class="rail-title">Project stats at a glance</h2>
 
       <div id="homeStats" class="stats-grid" aria-live="polite">
-        <article class="stat-card">
-          <div class="stat-value">—</div>
-          <div class="stat-label">Scenes visited</div>
-        </article>
-
-        <article class="stat-card">
-          <div class="stat-value">—</div>
-          <div class="stat-label">Titles</div>
-        </article>
-
-        <article class="stat-card">
-          <div class="stat-value">—</div>
-          <div class="stat-label">Cities</div>
-        </article>
-
-        <article class="stat-card">
-          <div class="stat-value">—</div>
-          <div class="stat-label">Countries</div>
-        </article>
+        <article class="stat-card"><div class="stat-value">—</div><div class="stat-label">Scenes visited</div></article>
+        <article class="stat-card"><div class="stat-value">—</div><div class="stat-label">Titles</div></article>
+        <article class="stat-card"><div class="stat-value">—</div><div class="stat-label">Cities</div></article>
+        <article class="stat-card"><div class="stat-value">—</div><div class="stat-label">Countries</div></article>
       </div>
     </section>
 
@@ -63,14 +49,17 @@
       const params = new URLSearchParams(window.location.search);
       const mapParams = ["q", "tab", "fk", "fl", "loc", "rm", "mlat", "mlng", "mz"];
       const shouldRedirect = mapParams.some((key) => params.has(key));
-
-      if (shouldRedirect) {
-        window.location.replace("./explore/" + window.location.search);
-      }
+      if (shouldRedirect) window.location.replace("./explore/" + window.location.search);
     })();
   </script>
 
   <script src="./src/disclaimer.js"></script>
+  <script src="./src/utils.js"></script>
+  <script src="./src/data-cache.js"></script>
+  <script src="./src/csv.js"></script>
+  <script src="./src/data-store.js"></script>
+  <script src="./src/scene-packs.js"></script>
+  <script src="./src/title-datasets.js"></script>
   <script src="./src/home-v2-utils.js"></script>
   <script src="./src/home-v2-data.js"></script>
   <script src="./src/home-v2-rails.js"></script>

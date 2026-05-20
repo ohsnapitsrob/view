@@ -6,6 +6,7 @@
   <title>All Titles | Find That Scene</title>
 
   <link rel="preconnect" href="https://images.pixieset.com">
+  <link rel="stylesheet" href="../src/loader.css" />
   <link rel="stylesheet" href="./browse.css" />
 
   <script src="../runtime-config.js"></script>
@@ -13,6 +14,7 @@
   <script src="../src/feature-toggles.js"></script>
   <script src="../src/site-content.js"></script>
   <script src="../src/app-shell.js"></script>
+  <script src="../src/boot.js"></script>
 </head>
 <body>
   <noscript>
@@ -53,7 +55,7 @@
         <div id="browseCount" class="browse-count"></div>
       </div>
 
-      <div id="browseList" class="browse-list"></div>
+      <div id="browseList" class="browse-list"><div class="fts-loader" aria-label="Loading"></div></div>
     </section>
 
     <div data-site-disclaimer></div>
@@ -61,7 +63,10 @@
 
   <script src="../src/disclaimer.js"></script>
   <script src="../src/utils.js"></script>
+  <script src="../src/data-cache.js"></script>
   <script src="../src/csv.js"></script>
+  <script src="../src/data-store.js"></script>
+  <script src="../src/scene-packs.js"></script>
   <script src="../src/visibility.js"></script>
   <script src="../src/locations.js"></script>
   <script src="./browse.js"></script>

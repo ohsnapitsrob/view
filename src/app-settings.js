@@ -29,10 +29,27 @@ FTS.AppSettings = (function () {
     return load();
   }
 
+  function clearRuntimeCaches() {
+    try {
+      window.FTS?.DataCache?.clearCache?.();
+    } catch (err) {}
+
+    try {
+      window.FTS?.DataStore?.clear?.();
+    } catch (err) {}
+
+    try {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith("fts:")) sessionStorage.removeItem(key);
+      });
+    } catch (err) {}
+  }
+
   function setSetting(key, value) {
     const settings = load();
     settings[key] = value;
     save(settings);
+    clearRuntimeCaches();
 
     window.dispatchEvent(new CustomEvent("fts:app-settings-updated", {
       detail: settings
@@ -80,6 +97,8 @@ FTS.AppSettings = (function () {
         mediaEmbeds: nextPrivacySettings.mediaEmbeds === true
       }));
     } catch (err) {}
+
+    clearRuntimeCaches();
 
     window.dispatchEvent(new CustomEvent("fts:app-settings-updated", {
       detail: nextAppSettings
@@ -343,9 +362,9 @@ FTS.AppSettings = (function () {
       ${homepagePosterOverlaysEnabled ? `
         <div class="fts-settings-row">
           <div>
-            <div class="fts-settings-row-title">Hide homepage tags</div>
+            <div class="fts-settings-row-title">Hide poster overlay tags</div>
           </div>
-          ${toggleButton(stagedAppSettings.hideHomepageTags, "Toggle hiding homepage tags", "hideHomepageTags")}
+          ${toggleButton(stagedAppSettings.hideHomepageTags, "Toggle hiding poster overlay tags", "hideHomepageTags")}
         </div>
       ` : ""}
     `;

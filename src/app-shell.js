@@ -5,16 +5,6 @@
     return window.RUNTIME_CONFIG || {};
   }
 
-  function getSharedScriptBase() {
-    const path = window.location.pathname.replace(/\/+$/, "");
-    const routeNames = ["browse", "explore", "title", "stats", "national-trust", "privacy", "metadata", "person"];
-    const isNestedRoute = routeNames.some((route) => path.endsWith(`/${route}`));
-
-    return isNestedRoute ? "../src/" : "./src/";
-  }
-
-  const sharedScriptBase = getSharedScriptBase();
-
   function getScriptTarget() {
     return document.head || document.documentElement;
   }
@@ -27,14 +17,29 @@
     }
   }
 
-  function loadSharedScript(name, attribute, options = {}) {
+  function getFallbackScriptBase() {
+    const path = window.location.pathname.replace(/\/+$/, "");
+    const routeNames = ["browse", "explore", "title", "stats", "national-trust", "privacy", "metadata", "person", "genre", "films", "series", "music-videos", "games", "other"];
+    const isNestedRoute = routeNames.some((route) => path.endsWith(`/${route}`));
+    return isNestedRoute ? "../src/" : "./src/";
+  }
+
+  function getSharedScriptBase() {
+    if (window.FTS?.Routes?.isNestedRoute) {
+      return window.FTS.Routes.isNestedRoute() ? "../src/" : "./src/";
+    }
+
+    return getFallbackScriptBase();
+  }
+
+  function loadScriptFromBase(name, attribute, base, options = {}) {
     if (document.querySelector(`script[${attribute}]`)) {
       return Promise.resolve();
     }
 
     return new Promise((resolve) => {
       const script = document.createElement("script");
-      script.src = `${sharedScriptBase}${name}`;
+      script.src = `${base}${name}`;
       script.setAttribute(attribute, "true");
       script.async = false;
 
@@ -47,6 +52,10 @@
 
       getScriptTarget().appendChild(script);
     });
+  }
+
+  function loadSharedScript(name, attribute, options = {}) {
+    return loadScriptFromBase(name, attribute, getSharedScriptBase(), options);
   }
 
   function dispatchReady(name) {
@@ -65,10 +74,16 @@
     }
   }
 
-  function loadPrivacySystem() {
-    return loadSharedScript("privacy-consent.js", "data-fts-privacy-consent")
-      .then(() => dispatchReady("privacy"));
+  function loadRoutes() {
+    return loadScriptFromBase("routes.js", "data-fts-routes", getFallbackScriptBase())
+      .then(() => dispatchReady("routes"));
   }
+
+  function loadPrivacySystem() {
+  return loadSharedScript("privacy-consent.js", "data-fts-privacy-consent")
+    .then(() => loadSharedScript("privacy-consent-cache-safe.js", "data-fts-privacy-consent-cache-safe"))
+    .then(() => dispatchReady("privacy"));
+}
 
   function loadAppSettings() {
     return loadSharedScript("app-settings.js", "data-fts-app-settings")
@@ -101,11 +116,11 @@
 
   function loadAnalytics() {
     if (window.FTS?.Features?.isEnabled("plausibleAnalyticsEnabled") !== true) {
-      return;
+      return Promise.resolve();
     }
 
     if (!hasPrivacyChoice()) {
-      return;
+      return Promise.resolve();
     }
 
     return loadSharedScript("analytics.js", "data-fts-analytics")
@@ -114,7 +129,7 @@
 
   function loadEasterEggs() {
     if (window.FTS?.Features?.isEnabled("easterEggsEnabled") !== true) {
-      return;
+      return Promise.resolve();
     }
 
     return loadSharedScript("easter-eggs.js", "data-fts-easter-eggs")
@@ -170,19 +185,26 @@
     });
   }
 
-  loadPrivacySystem();
-  loadAppSettings();
-  loadVisibility();
-  loadAppHeaderModules();
-  loadEasterEggs();
+  loadRoutes().then(async () => {
+    await Promise.all([
+      loadAppHeaderModules(),
+      loadBottomNav()
+    ]);
 
-  if (window.FTS?.Features?.isEnabled("iosInstallPromptEnabled") === true) {
-    loadIOSInstallPrompt();
-  }
+    document.documentElement.setAttribute("data-shell-ready", "true");
 
-  loadAnalytics();
-  showEnvironmentBadge();
-  loadBottomNav();
+    loadPrivacySystem();
+    loadAppSettings();
+    loadVisibility();
+    loadEasterEggs();
+
+    if (window.FTS?.Features?.isEnabled("iosInstallPromptEnabled") === true) {
+      loadIOSInstallPrompt();
+    }
+
+    loadAnalytics();
+    showEnvironmentBadge();
+  });
 
   window.addEventListener("load", () => {
     window.FTS?.Privacy?.maybeShowInitialPrompt?.();

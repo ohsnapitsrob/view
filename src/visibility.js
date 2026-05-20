@@ -25,20 +25,37 @@ FTS.Visibility = (function () {
       .toUpperCase();
   }
 
-  function shouldHideScene(scene) {
-    const settings = getSettings();
+  function accessValue(scene) {
+    return normaliseAccess(
+      scene?.Access ||
+      scene?.access ||
+      scene?.ACCESS ||
+      scene?.["access "] ||
+      scene?.["Access "] ||
+      scene?.["No Access"] ||
+      scene?.noaccess ||
+      scene?.NOACCESS
+    );
+  }
 
-    if (settings.hideNoAccessScenes !== true) {
+  function isRestrictedScene(scene) {
+    return accessValue(scene) !== "";
+  }
+
+  function hideNoAccessEnabled() {
+    return getSettings().hideNoAccessScenes === true;
+  }
+
+  function mode() {
+    return hideNoAccessEnabled() ? "public-only" : "all";
+  }
+
+  function shouldHideScene(scene) {
+    if (!hideNoAccessEnabled()) {
       return false;
     }
 
-    const access = normaliseAccess(
-      scene?.Access ||
-      scene?.access ||
-      scene?.ACCESS
-    );
-
-    return access === "NOACCESS";
+    return isRestrictedScene(scene);
   }
 
   function getVisibleScenes(scenes) {
@@ -52,6 +69,11 @@ FTS.Visibility = (function () {
   return {
     shouldHideScene,
     getVisibleScenes,
-    hasVisibleScenes
+    hasVisibleScenes,
+    hideNoAccessEnabled,
+    mode,
+    normaliseAccess,
+    accessValue,
+    isRestrictedScene
   };
 })();

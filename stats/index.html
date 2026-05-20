@@ -6,48 +6,57 @@
   <title>Stats | Find That Scene</title>
 
   <link rel="preconnect" href="https://images.pixieset.com">
-  <link rel="stylesheet" href="./stats.css" />
+  <link rel="stylesheet" href="../src/loader.css" />
+  <link rel="stylesheet" href="../home.css" />
+
+  <style>
+    .stats-shell { width:min(1240px,100%); margin:0 auto; padding:22px 18px 56px; display:grid; gap:26px; }
+    .stats-hero { background:#fff; border:1px solid var(--border); border-radius:var(--radius-xl); box-shadow:var(--shadow-card); padding:24px; display:grid; gap:10px; }
+    .stats-kicker { margin:0; color:#9ca3af; font-size:12px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+    .stats-title { margin:0; font-size:clamp(34px,7vw,72px); line-height:.95; letter-spacing:-.06em; font-weight:900; overflow-wrap:anywhere; }
+    .stats-copy { margin:0; color:#555; font-size:15px; line-height:1.5; max-width:720px; }
+    .stats-grid-page { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; }
+    .stats-card-page { background:#fff; border:1px solid var(--border); border-radius:22px; box-shadow:var(--shadow-card); padding:18px; }
+    .stats-card-value { font-size:34px; line-height:1; font-weight:900; letter-spacing:-.05em; }
+    .stats-card-label { margin-top:8px; color:#666; font-size:13px; font-weight:800; }
+    .stats-section { display:grid; gap:14px; }
+    .stats-section h2 { margin:0; font-size:24px; letter-spacing:-.04em; }
+    .stats-list { display:grid; gap:10px; }
+    .stats-row { display:flex; justify-content:space-between; gap:16px; background:#fff; border:1px solid var(--border); border-radius:16px; padding:13px 15px; font-size:14px; }
+    .stats-row strong { font-weight:850; }
+    .type-loading-stage { min-height:260px; display:grid; place-items:center; }
+  </style>
 
   <script src="../runtime-config.js"></script>
-  <script src="../config.js"></script>
-  <script src="../src/feature-toggles.js"></script>
-  <script src="../src/site-content.js"></script>
-  <script src="../src/environment-rules.js"></script>
-  <script src="../src/environment-guards.js"></script>
-  <script>
-    window.FTS?.EnvironmentGuards?.init?.();
-  </script>
-  <script src="../src/app-shell.js"></script>
+<script src="../config.js"></script>
+<script src="../src/feature-toggles.js"></script>
+<script src="../src/site-content.js"></script>
+<script src="../src/environment-rules.js"></script>
+<script src="../src/environment-guards.js"></script>
+<script>
+  window.FTS?.EnvironmentGuards?.init?.();
+</script>
+<script src="../src/app-shell.js"></script>
+<script src="../src/boot.js"></script>
 </head>
-<body>
-  <noscript>
-    <div style="margin:16px; padding:16px; border-radius:18px; background:#111827; color:#ffffff; font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-      <strong>JavaScript is needed for Find That Scene.</strong><br>
-      Maps, search, browsing features, privacy settings, and optional media controls rely on JavaScript. Optional media embeds are not loaded unless JavaScript is enabled and consent is given.
-    </div>
-  </noscript>
-
+<body data-nav-root="../">
   <main class="stats-shell">
     <section class="stats-hero">
-      <div class="stats-hero-main">
-        <div>
-          <h1>Stats</h1>
-          <p>
-            Project mode starts July 2025. Earlier dates stay counted elsewhere, but the main stats here focus on the proper scene-hunting era.
-          </p>
-        </div>
-      </div>
-
-      <nav class="stats-nav" aria-label="Stats navigation">
-        <a class="btn btn-secondary" href="../explore/">Map view</a>
-        <a class="btn btn-primary" href="../browse/">Browse view</a>
-      </nav>
+      <p class="stats-kicker">Stats</p>
+      <h1 class="stats-title">Project stats</h1>
+      <p id="statsCopy" class="stats-copy">Loading project totals.</p>
     </section>
 
-    <div id="statsLoading" class="loading-card">Loading stats…</div>
-    <div id="statsRoot" style="display:none;"></div>
+    <section id="statsContent">
+      <section class="type-loading-stage"><div class="fts-loader" aria-label="Loading"></div></section>
+    </section>
   </main>
 
+  <script src="../src/utils.js"></script>
+  <script src="../src/data-cache.js"></script>
+  <script src="../src/csv.js"></script>
+  <script src="../src/data-store.js"></script>
+  <script src="../src/scene-packs.js"></script>
   <script src="./stats.js"></script>
 </body>
 </html>

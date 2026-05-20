@@ -42,6 +42,27 @@ FTS.HomeV2 = (function () {
     window.addEventListener("fts:privacy-updated", callback, { once: true });
   }
 
+  function waitForShellDependencies(callback) {
+    if (window.FTS?.AppSettings && window.FTS?.Visibility) {
+      callback();
+      return;
+    }
+
+    const startedAt = Date.now();
+    const interval = window.setInterval(() => {
+      if (window.FTS?.AppSettings && window.FTS?.Visibility) {
+        window.clearInterval(interval);
+        callback();
+        return;
+      }
+
+      if (Date.now() - startedAt > 2500) {
+        window.clearInterval(interval);
+        callback();
+      }
+    }, 25);
+  }
+
   function formatNumber(value) {
     return Number(value || 0).toLocaleString();
   }
@@ -50,21 +71,13 @@ FTS.HomeV2 = (function () {
     const statsEl = document.getElementById("homeStats");
     if (!statsEl) return;
 
-    const titles = new Set();
-    const cities = new Set();
-    const countries = new Set();
-
-    context.visibleRows.forEach((row) => {
-      if (row.title) titles.add(row.title);
-      if (row.city) cities.add(row.city);
-      if (row.country) countries.add(row.country);
-    });
+    const counts = context.homepageCounts || {};
 
     statsEl.innerHTML = `
-      <article class="stat-card"><div class="stat-value">${formatNumber(context.visibleRows.length)}</div><div class="stat-label">Scenes</div></article>
-      <article class="stat-card"><div class="stat-value">${formatNumber(titles.size)}</div><div class="stat-label">Titles</div></article>
-      <article class="stat-card"><div class="stat-value">${formatNumber(cities.size)}</div><div class="stat-label">Cities</div></article>
-      <article class="stat-card"><div class="stat-value">${formatNumber(countries.size)}</div><div class="stat-label">Countries</div></article>
+      <article class="stat-card"><div class="stat-value">${formatNumber(counts.scenes)}</div><div class="stat-label">Scenes</div></article>
+      <article class="stat-card"><div class="stat-value">${formatNumber(counts.titles)}</div><div class="stat-label">Titles</div></article>
+      <article class="stat-card"><div class="stat-value">${formatNumber(counts.cities)}</div><div class="stat-label">Cities</div></article>
+      <article class="stat-card"><div class="stat-value">${formatNumber(counts.countries)}</div><div class="stat-label">Countries</div></article>
     `;
   }
 
@@ -83,6 +96,11 @@ FTS.HomeV2 = (function () {
 
       window.FTS.HomeV2Renderer.render(railsRoot, rails);
       window.FTS.HomeV2Renderer.enableDragging(railsRoot);
+
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"));
+      });
+
       renderStats(context);
 
       if (!rails.length) {
@@ -97,8 +115,27 @@ FTS.HomeV2 = (function () {
     }
   }
 
+  function rebuildHomepageDatasets() {
+    if (window.FTS?.DataStore?.clear) {
+      [
+        "homepage-datasets:all",
+        "homepage-datasets:public-only",
+        "visibility-datasets:all",
+        "visibility-datasets:public-only",
+        "explore-search-indexes:all",
+        "explore-search-indexes:public-only"
+      ].forEach((key) => window.FTS.DataStore.clear(key));
+    }
+
+    init();
+  }
+
   function boot() {
-    waitForPrivacyChoice(init);
+    waitForShellDependencies(() => {
+      waitForPrivacyChoice(init);
+    });
+
+    window.addEventListener("fts:app-settings-updated", rebuildHomepageDatasets);
   }
 
   if (document.readyState === "loading") {

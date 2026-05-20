@@ -17,6 +17,24 @@ App.Map = (function () {
   const POINT_CIRCLES_ID = "scene-point-circles";
   const POINT_LABELS_ID = "scene-point-labels";
 
+  function isStaging() {
+    return (window.RUNTIME_CONFIG || {}).environment === "staging";
+  }
+
+  function logStagingMapView(reason) {
+    if (!isStaging() || !map || !window.console) return;
+
+    const center = map.getCenter();
+    console.log("[FTS Map Debug]", {
+      reason,
+      zoom: Number(map.getZoom().toFixed(3)),
+      center: {
+        lng: Number(center.lng.toFixed(6)),
+        lat: Number(center.lat.toFixed(6))
+      }
+    });
+  }
+
   function styleFromConfig(styleName) {
     const s = (styleName || "streets").toString().toLowerCase();
 
@@ -48,9 +66,12 @@ App.Map = (function () {
     map = new maptilersdk.Map({
       container: "map",
       style: styleFromConfig(MAP_STYLE),
-      center: [-2.5, 54.5],
-      zoom: 6
+      center: [-1.531309, 52.430959],
+      zoom: 6.437
     });
+
+    map.on("zoomend", () => logStagingMapView("zoomend"));
+    map.on("moveend", () => logStagingMapView("moveend"));
 
     map.setView = function (latLng, zoom, options = {}) {
       const lat = latLng[0];

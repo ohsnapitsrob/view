@@ -1,9 +1,10 @@
 (function () {
   function getRootPath() {
+    if (window.FTS?.Routes?.getRootPath) return window.FTS.Routes.getRootPath();
     if (document.body.dataset.navRoot) return document.body.dataset.navRoot;
 
     const path = window.location.pathname.replace(/\/+$/, "");
-    const nestedRoutes = ["/browse", "/explore", "/title", "/stats", "/national-trust", "/privacy", "/metadata", "/person"];
+    const nestedRoutes = ["/browse", "/explore", "/title", "/stats", "/national-trust", "/privacy", "/metadata", "/person", "/genre"];
 
     if (nestedRoutes.some((route) => path.endsWith(route))) {
       return "../";
@@ -70,12 +71,14 @@
       }
 
       .fts-bottom-nav {
-        position: fixed;
-        left: 50%;
-        bottom: calc(14px + env(safe-area-inset-bottom));
+        position: fixed !important;
+        left: 50% !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: calc(14px + env(safe-area-inset-bottom)) !important;
         z-index: 3600;
         width: min(460px, calc(100vw - 20px));
-        transform: translateX(-50%);
+        transform: translate3d(-50%, 0, 0);
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 6px;
@@ -86,6 +89,7 @@
         box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
         backdrop-filter: blur(18px);
         -webkit-backdrop-filter: blur(18px);
+        will-change: transform;
       }
 
       .fts-bottom-nav a {
@@ -119,7 +123,7 @@
       @media (min-width: 900px) {
         .fts-bottom-nav {
           width: 420px;
-          bottom: 18px;
+          bottom: 18px !important;
         }
       }
     `;
