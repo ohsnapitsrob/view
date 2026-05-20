@@ -11,8 +11,6 @@
   }
 
   async function fetchMetadataRows() {
-    await window.FTS?.Boot?.ready?.({ scenePacks: true, titleVisibility: true });
-
     if (window.FTS?.DataStore?.getTitleMetadata) {
       return window.FTS.DataStore.getTitleMetadata();
     }
@@ -92,15 +90,31 @@
   async function boot() {
     const pageConfig = window.FTS_TYPE_PAGE;
     if (!pageConfig) return;
+
     ensureFallbackStyles();
     renderLoading();
-    const [rows, visibleTitleKeys, restrictedTitleKeys] = await Promise.all([fetchMetadataRows(), getVisibleTitleKeys(), getNoAccessTitleKeys()]);
+
+    await window.FTS?.Boot?.ready?.({
+      appSettings: true,
+      scenePacks: true,
+      titleVisibility: true,
+      titleDatasets: true
+    });
+
+    const [rows, visibleTitleKeys, restrictedTitleKeys] = await Promise.all([
+      fetchMetadataRows(),
+      getVisibleTitleKeys(),
+      getNoAccessTitleKeys()
+    ]);
+
     noAccessTitleKeys = restrictedTitleKeys;
+
     const typeKeys = getTypeKeys(pageConfig);
     const matches = rows
       .filter((row) => typeKeys.includes(key(getValue(row, "type"))))
       .filter((row) => !visibleTitleKeys || visibleTitleKeys.has(key(getValue(row, "title"))))
       .sort((a, b) => norm(getValue(a, "title")).localeCompare(norm(getValue(b, "title"))));
+
     document.title = `${pageConfig.label} | Find That Scene`;
     renderReady(pageConfig, matches);
   }
