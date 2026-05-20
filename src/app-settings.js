@@ -362,9 +362,9 @@ FTS.AppSettings = (function () {
       ${homepagePosterOverlaysEnabled ? `
         <div class="fts-settings-row">
           <div>
-            <div class="fts-settings-row-title">Hide homepage tags</div>
+            <div class="fts-settings-row-title">Hide poster overlay tags</div>
           </div>
-          ${toggleButton(stagedAppSettings.hideHomepageTags, "Toggle hiding homepage tags", "hideHomepageTags")}
+          ${toggleButton(stagedAppSettings.hideHomepageTags, "Toggle hiding poster overlay tags", "hideHomepageTags")}
         </div>
       ` : ""}
     `;
