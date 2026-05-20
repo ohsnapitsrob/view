@@ -1,8 +1,9 @@
 (function () {
   const config = window.APP_CONFIG || {};
+  let noAccessTitleKeys = new Set();
 
   function norm(value) { return (value || "").toString().trim(); }
-  function key(value) { return norm(value).toLowerCase(); }
+  function key(value) { return window.FTS?.Utils?.normalizeComparable ? window.FTS.Utils.normalizeComparable(value) : norm(value).toLowerCase(); }
   function getValue(row, field) {
     const target = key(field);
     const matched = Object.keys(row).find((item) => key(item) === target);
@@ -10,7 +11,7 @@
   }
 
   async function fetchMetadataRows() {
-    await window.FTS?.Boot?.ready?.({ dataStore: true, titleVisibility: true });
+    await window.FTS?.Boot?.ready?.({ scenePacks: true, titleVisibility: true });
 
     if (window.FTS?.DataStore?.getTitleMetadata) {
       return window.FTS.DataStore.getTitleMetadata();
@@ -27,11 +28,27 @@
     document.head.appendChild(style);
   }
 
+  function featureEnabled(name) {
+    return window.FTS?.Features?.isEnabled ? window.FTS.Features.isEnabled(name) : true;
+  }
+
+  function hidePosterTags() {
+    return window.FTS?.AppSettings?.getSettings?.().hideHomepageTags === true;
+  }
+
+  function noAccessBadge(title) {
+    if (!featureEnabled("homepagePosterOverlays")) return "";
+    if (hidePosterTags()) return "";
+    if (!noAccessTitleKeys.has(key(title))) return "";
+
+    return `<div class="poster-badges"><span class="poster-badge poster-badge-no-access">No access</span></div>`;
+  }
+
   function posterCard(item) {
     const title = norm(getValue(item, "title"));
     const poster = norm(getValue(item, "poster"));
     const escapeHtml = window.FTS?.Utils?.escapeHtml || ((value) => norm(value));
-    return `<a class="person-card" href="../title/?fl=${encodeURIComponent(title)}" aria-label="${escapeHtml(title)}"><div class="poster-card">${poster ? `<img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy">` : `<div class="poster-fallback">${escapeHtml(title)}</div>`}</div></a>`;
+    return `<a class="person-card" href="../title/?fl=${encodeURIComponent(title)}" aria-label="${escapeHtml(title)}"><div class="poster-card">${poster ? `<img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy">` : `<div class="poster-fallback">${escapeHtml(title)}</div>`}${noAccessBadge(title)}</div></a>`;
   }
 
   function getTypeKeys(pageConfig) {
@@ -42,6 +59,13 @@
   async function getVisibleTitleKeys() {
     if (window.FTS?.TitleVisibility?.visibleTitleKeys) return window.FTS.TitleVisibility.visibleTitleKeys();
     return null;
+  }
+
+  async function getNoAccessTitleKeys() {
+    if (!window.FTS?.DataStore?.getScenePacks) return new Set();
+
+    const scenePacks = await window.FTS.DataStore.getScenePacks();
+    return scenePacks.onlyRestrictedTitleKeys || new Set();
   }
 
   function renderLoading() {
@@ -70,7 +94,8 @@
     if (!pageConfig) return;
     ensureFallbackStyles();
     renderLoading();
-    const [rows, visibleTitleKeys] = await Promise.all([fetchMetadataRows(), getVisibleTitleKeys()]);
+    const [rows, visibleTitleKeys, restrictedTitleKeys] = await Promise.all([fetchMetadataRows(), getVisibleTitleKeys(), getNoAccessTitleKeys()]);
+    noAccessTitleKeys = restrictedTitleKeys;
     const typeKeys = getTypeKeys(pageConfig);
     const matches = rows
       .filter((row) => typeKeys.includes(key(getValue(row, "type"))))
