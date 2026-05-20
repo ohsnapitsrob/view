@@ -66,8 +66,8 @@ App.Map = (function () {
     map = new maptilersdk.Map({
       container: "map",
       style: styleFromConfig(MAP_STYLE),
-      center: [-2.5, 54.5],
-      zoom: 6
+      center: [-1.531309, 52.430959],
+      zoom: 6.437
     });
 
     map.on("zoomend", () => logStagingMapView("zoomend"));
