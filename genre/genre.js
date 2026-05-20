@@ -2,6 +2,7 @@
   const titleEl = document.getElementById("genreTitle");
   const copyEl = document.getElementById("genreCopy");
   const gridEl = document.getElementById("genreGrid");
+  let noAccessTitleKeys = new Set();
 
   function norm(value) {
     return window.FTS?.Utils?.norm ? window.FTS.Utils.norm(value) : (value || "").toString().trim();
@@ -17,6 +18,22 @@
 
   function splitComma(value) {
     return window.FTS?.Utils?.splitComma ? window.FTS.Utils.splitComma(value) : norm(value).split(",").map(norm).filter(Boolean);
+  }
+
+  function featureEnabled(name) {
+    return window.FTS?.Features?.isEnabled ? window.FTS.Features.isEnabled(name) : true;
+  }
+
+  function hidePosterTags() {
+    return window.FTS?.AppSettings?.getSettings?.().hideHomepageTags === true;
+  }
+
+  function noAccessBadge(title) {
+    if (!featureEnabled("homepagePosterOverlays")) return "";
+    if (hidePosterTags()) return "";
+    if (!noAccessTitleKeys.has(key(title))) return "";
+
+    return `<div class="poster-badges"><span class="poster-badge poster-badge-no-access">No access</span></div>`;
   }
 
   function redirectTo404(reason, value = "") {
@@ -47,6 +64,7 @@
       <a class="genre-card" href="../title/?fl=${encodeURIComponent(title)}" aria-label="${escapeHtml(title)}">
         <div class="poster-card">
           ${poster ? `<img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy">` : `<div class="poster-fallback">${escapeHtml(title)}</div>`}
+          ${noAccessBadge(title)}
         </div>
       </a>
     `;
@@ -66,6 +84,13 @@
     return null;
   }
 
+  async function getNoAccessTitleKeys() {
+    if (!window.FTS?.DataStore?.getScenePacks) return new Set();
+
+    const scenePacks = await window.FTS.DataStore.getScenePacks();
+    return scenePacks.onlyRestrictedTitleKeys || new Set();
+  }
+
   async function init() {
     await window.FTS?.Boot?.ready?.({ scenePacks: true, titleDatasets: true });
 
@@ -81,10 +106,13 @@
     document.title = `${genre} | Find That Scene`;
 
     try {
-      const [metadataRows, visibleKeys] = await Promise.all([
+      const [metadataRows, visibleKeys, restrictedTitleKeys] = await Promise.all([
         window.FTS.DataStore.getTitleMetadata(),
-        getVisibleTitleKeys()
+        getVisibleTitleKeys(),
+        getNoAccessTitleKeys()
       ]);
+
+      noAccessTitleKeys = restrictedTitleKeys;
 
       const matches = metadataRows
         .filter((row) => !type || norm(row.type) === type)
