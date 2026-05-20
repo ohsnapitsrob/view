@@ -115,10 +115,11 @@
     const style = document.createElement("style");
     style.id = "fts-genre-group-style";
     style.textContent = `
-      .genre-groups { display: grid; gap: 28px; }
+      .genre-grid.genre-grid-grouped { display: block; }
+      .genre-groups { display: grid; gap: 28px; width: 100%; }
       .genre-group { display: grid; gap: 14px; }
       .genre-group-title { margin: 0; font-size: clamp(24px, 4vw, 38px); line-height: 1; letter-spacing: -0.05em; font-weight: 850; }
-      .genre-group-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); gap: 18px 16px; min-width: 0; }
+      .genre-group-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); gap: 18px 16px; min-width: 0; width: 100%; }
       @media (max-width: 560px) { .genre-group-grid { grid-template-columns: repeat(auto-fill,minmax(118px,1fr)); gap: 14px; } }
     `;
 
@@ -158,6 +159,7 @@
 
   function renderGroups(groups) {
     const showGroupHeadings = groups.length > 1;
+    gridEl.classList.add("genre-grid-grouped");
 
     gridEl.innerHTML = `
       <div class="genre-groups">
@@ -204,14 +206,17 @@
       const groups = groupMatches(matches, preferredType);
 
       copyEl.textContent = `${matches.length} title${matches.length === 1 ? "" : "s"} found.`;
-      gridEl.innerHTML = groups.length
-        ? ""
-        : `<div class="poster-fallback">No matches</div>`;
 
-      if (groups.length) renderGroups(groups);
+      if (groups.length) {
+        renderGroups(groups);
+      } else {
+        gridEl.classList.remove("genre-grid-grouped");
+        gridEl.innerHTML = `<div class="poster-fallback">No matches</div>`;
+      }
     } catch (err) {
       console.error(err);
       copyEl.textContent = "Could not load this genre.";
+      gridEl.classList.remove("genre-grid-grouped");
       gridEl.innerHTML = "";
     }
   }
