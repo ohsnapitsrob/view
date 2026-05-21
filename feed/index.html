@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Scene Feed | Find That Scene</title>
+
+  <link rel="preconnect" href="https://images.pixieset.com">
+  <link rel="stylesheet" href="../src/loader.css" />
+  <link rel="stylesheet" href="../home.css" />
+  <link rel="stylesheet" href="./feed.css" />
+
+  <script src="../runtime-config.js"></script>
+  <script src="../config.js"></script>
+  <script src="../src/feature-toggles.js"></script>
+  <script src="../src/site-content.js"></script>
+  <script src="../src/app-shell.js"></script>
+  <script src="../src/boot.js"></script>
+</head>
+<body data-nav-root="../">
+  <noscript>
+    <div style="margin:16px; padding:16px; border-radius:18px; background:#111827; color:#ffffff; font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+      <strong>JavaScript is needed for Find That Scene.</strong><br>
+      Maps, search, browsing features, privacy settings, and optional media controls rely on JavaScript.
+    </div>
+  </noscript>
+
+  <main class="feed-shell">
+    <section class="feed-hero">
+      <div>
+        <div class="kicker">Feed</div>
+        <h1>Latest scenes</h1>
+        <p class="meta">A newest first feed of scenes added across film, series, music videos, games and more.</p>
+      </div>
+    </section>
+
+    <section id="feedContent" class="feed-content" aria-live="polite">
+      <section class="type-loading-stage"><div class="fts-loader" aria-label="Loading"></div></section>
+    </section>
+
+    <div data-site-disclaimer></div>
+  </main>
+
+  <script src="../src/disclaimer.js"></script>
+  <script src="../src/utils.js"></script>
+  <script src="../src/data-cache.js"></script>
+  <script src="../src/csv.js"></script>
+  <script src="../src/data-store.js"></script>
+  <script src="../src/scene-packs.js"></script>
+  <script src="./feed.js"></script>
+</body>
+</html>
