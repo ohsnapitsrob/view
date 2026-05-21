@@ -73,18 +73,14 @@
 
     return `
       <article class="feed-card">
+        <h2 class="feed-title">${escapeHtml(scene.title)}</h2>
+        <p class="feed-location">${escapeHtml(location)}</p>
         <a class="feed-thumb" href="${mapUrl(scene)}" aria-label="Open ${escapeHtml(scene.title)} on the map">
           ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(scene.title)} scene image" loading="lazy">` : `<span class="feed-thumb-fallback">No image</span>`}
         </a>
-        <div class="feed-main">
-          <div class="feed-row">
-            <div>
-              <h2 class="feed-title">${escapeHtml(scene.title)}</h2>
-              <p class="feed-location">${escapeHtml(location)}</p>
-            </div>
-            <a class="feed-map-btn" href="${mapUrl(scene)}" aria-label="Open this scene on the map">⌖</a>
-          </div>
+        <div class="feed-footer">
           <div class="feed-age">${escapeHtml(daysAgo(timestamp))}</div>
+          <a class="feed-map-btn" href="${mapUrl(scene)}" aria-label="Open this scene on the map">⌖</a>
         </div>
       </article>
     `;
