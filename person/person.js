@@ -163,13 +163,11 @@
   }
 
   function renderGroups(groups) {
-    const showGroupHeadings = groups.length > 1;
-
     contentEl.innerHTML = `
       <div class="person-type-groups">
         ${groups.map((group) => `
           <section class="person-type-group">
-            ${showGroupHeadings ? `<h2 class="person-type-group-title">${escapeHtml(group.label)}</h2>` : ""}
+            <h2 class="person-type-group-title">${escapeHtml(group.label)}</h2>
             <div class="person-type-group-grid">
               ${group.items.map(posterCard).join("")}
             </div>
