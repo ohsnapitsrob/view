@@ -19,7 +19,7 @@
 
   function getFallbackScriptBase() {
     const path = window.location.pathname.replace(/\/+$/, "");
-    const routeNames = ["browse", "explore", "title", "stats", "national-trust", "privacy", "metadata", "person", "genre", "films", "series", "music-videos", "games", "other"];
+    const routeNames = ["browse", "explore", "title", "stats", "national-trust", "feed", "privacy", "metadata", "person", "genre", "films", "series", "music-videos", "games", "other"];
     const isNestedRoute = routeNames.some((route) => path.endsWith(`/${route}`));
     return isNestedRoute ? "../src/" : "./src/";
   }
@@ -80,10 +80,10 @@
   }
 
   function loadPrivacySystem() {
-  return loadSharedScript("privacy-consent.js", "data-fts-privacy-consent")
-    .then(() => loadSharedScript("privacy-consent-cache-safe.js", "data-fts-privacy-consent-cache-safe"))
-    .then(() => dispatchReady("privacy"));
-}
+    return loadSharedScript("privacy-consent.js", "data-fts-privacy-consent")
+      .then(() => loadSharedScript("privacy-consent-cache-safe.js", "data-fts-privacy-consent-cache-safe"))
+      .then(() => dispatchReady("privacy"));
+  }
 
   function loadAppSettings() {
     return loadSharedScript("app-settings.js", "data-fts-app-settings")
