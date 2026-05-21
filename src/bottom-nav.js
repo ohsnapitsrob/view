@@ -4,56 +4,25 @@
     if (document.body.dataset.navRoot) return document.body.dataset.navRoot;
 
     const path = window.location.pathname.replace(/\/+$/, "");
-    const nestedRoutes = ["/browse", "/explore", "/title", "/stats", "/national-trust", "/privacy", "/metadata", "/person", "/genre"];
-
-    if (nestedRoutes.some((route) => path.endsWith(route))) {
-      return "../";
-    }
-
-    return "./";
+    const nestedRoutes = ["/browse", "/explore", "/title", "/stats", "/national-trust", "/feed", "/privacy", "/metadata", "/person", "/genre", "/films", "/series", "/music-videos", "/games", "/other"];
+    return nestedRoutes.some((route) => path.endsWith(route)) ? "../" : "./";
   }
 
   const rootPath = getRootPath();
-
   const items = [
-    {
-      key: "home",
-      label: "Home",
-      href: rootPath,
-      icon: "home"
-    },
-    {
-      key: "browse",
-      label: "Browse",
-      href: `${rootPath}browse/`,
-      icon: "browse"
-    },
-    {
-      key: "map",
-      label: "Map",
-      href: `${rootPath}explore/`,
-      icon: "map"
-    }
+    { key: "home", label: "Home", href: rootPath, icon: "⌂" },
+    { key: "feed", label: "Feed", href: `${rootPath}feed/`, icon: "≡" },
+    { key: "map", label: "Map", href: `${rootPath}explore/`, icon: "⌖" },
+    { key: "browse", label: "Browse", href: `${rootPath}browse/`, icon: "▦" }
   ];
 
   function getActiveKey() {
     const path = window.location.pathname.replace(/\/+$/, "");
-
     if (path === "" || path === "/" || path.endsWith("/index.html")) return "home";
-    if (path.endsWith("/browse")) return "browse";
+    if (path.endsWith("/feed")) return "feed";
     if (path.endsWith("/explore")) return "map";
-
+    if (path.endsWith("/browse")) return "browse";
     return null;
-  }
-
-  function iconSvg(icon) {
-    const icons = {
-      home: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.4 12 4l9 7.4v8.1A1.5 1.5 0 0 1 19.5 21h-4.2v-5.7H8.7V21H4.5A1.5 1.5 0 0 1 3 19.5v-8.1z"></path></svg>`,
-      browse: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h3A1.5 1.5 0 0 1 10 5.5v3A1.5 1.5 0 0 1 8.5 10h-3A1.5 1.5 0 0 1 4 8.5v-3zm10 0A1.5 1.5 0 0 1 15.5 4h3A1.5 1.5 0 0 1 20 5.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 14 8.5v-3zM4 15.5A1.5 1.5 0 0 1 5.5 14h3a1.5 1.5 0 0 1 1.5 1.5v3A1.5 1.5 0 0 1 8.5 20h-3A1.5 1.5 0 0 1 4 18.5v-3zm10 0a1.5 1.5 0 0 1 1.5-1.5h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3a1.5 1.5 0 0 1-1.5-1.5v-3z"></path></svg>`,
-      map: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5A6.5 6.5 0 0 0 5.5 9c0 4.9 6.5 12.5 6.5 12.5S18.5 13.9 18.5 9A6.5 6.5 0 0 0 12 2.5zm0 9.1A2.6 2.6 0 1 1 12 6.4a2.6 2.6 0 0 1 0 5.2z"></path></svg>`
-    };
-
-    return icons[icon] || "";
   }
 
   function addStyle() {
@@ -62,14 +31,8 @@
     const style = document.createElement("style");
     style.id = "fts-bottom-nav-style";
     style.textContent = `
-      body.fts-has-bottom-nav {
-        padding-bottom: calc(88px + env(safe-area-inset-bottom));
-      }
-
-      body.fts-has-bottom-nav:has(#map) {
-        padding-bottom: 0;
-      }
-
+      body.fts-has-bottom-nav { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+      body.fts-has-bottom-nav:has(#map) { padding-bottom: 0; }
       .fts-bottom-nav {
         position: fixed !important;
         left: 50% !important;
@@ -77,10 +40,10 @@
         top: auto !important;
         bottom: calc(14px + env(safe-area-inset-bottom)) !important;
         z-index: 3600;
-        width: min(460px, calc(100vw - 20px));
+        width: min(520px, calc(100vw - 20px));
         transform: translate3d(-50%, 0, 0);
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 6px;
         padding: 7px;
         border: 1px solid rgba(229, 231, 235, 0.9);
@@ -89,9 +52,7 @@
         box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
         backdrop-filter: blur(18px);
         -webkit-backdrop-filter: blur(18px);
-        will-change: transform;
       }
-
       .fts-bottom-nav a {
         min-width: 0;
         min-height: 54px;
@@ -108,23 +69,10 @@
         letter-spacing: 0.01em;
         -webkit-tap-highlight-color: transparent;
       }
-
-      .fts-bottom-nav a[aria-current="page"] {
-        background: #111827;
-        color: #ffffff;
-      }
-
-      .fts-bottom-nav svg {
-        width: 22px;
-        height: 22px;
-        fill: currentColor;
-      }
-
+      .fts-bottom-nav a[aria-current="page"] { background: #111827; color: #ffffff; }
+      .fts-bottom-nav-icon { font-size: 22px; line-height: 1; font-weight: 850; }
       @media (min-width: 900px) {
-        .fts-bottom-nav {
-          width: 420px;
-          bottom: 18px !important;
-        }
+        .fts-bottom-nav { width: 500px; bottom: 18px !important; }
       }
     `;
 
@@ -136,15 +84,13 @@
 
     const activeKey = getActiveKey();
     const nav = document.createElement("nav");
-
     nav.className = "fts-bottom-nav";
     nav.setAttribute("aria-label", "Primary navigation");
     nav.innerHTML = items.map((item) => {
       const active = activeKey && item.key === activeKey;
-
       return `
         <a href="${item.href}"${active ? ' aria-current="page"' : ""}>
-          ${iconSvg(item.icon)}
+          <span class="fts-bottom-nav-icon" aria-hidden="true">${item.icon}</span>
           <span>${item.label}</span>
         </a>
       `;
