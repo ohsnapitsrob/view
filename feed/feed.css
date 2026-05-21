@@ -27,7 +27,7 @@ body {
 }
 
 .feed-shell {
-  width: min(920px, 100%);
+  width: min(760px, 100%);
   margin: 0 auto;
   padding: 28px 18px 96px;
   display: grid;
@@ -75,36 +75,50 @@ h1 {
 
 .feed-card {
   display: grid;
-  grid-template-columns: minmax(104px, 180px) minmax(0, 1fr);
-  gap: 14px;
-  align-items: stretch;
-  padding: 12px;
+  gap: 10px;
+  padding: clamp(14px, 3vw, 18px);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.94);
   box-shadow: var(--shadow-card);
 }
 
+.feed-title {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(20px, 4vw, 28px);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+  font-weight: 850;
+}
+
+.feed-location {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
 .feed-thumb {
   position: relative;
   display: block;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 18px;
   background: linear-gradient(135deg, rgba(90, 0, 230, 0.12), rgba(90, 0, 230, 0.04));
-  min-height: 96px;
+  aspect-ratio: 16 / 9;
+  margin-top: 2px;
 }
 
 .feed-thumb img {
   width: 100%;
   height: 100%;
-  min-height: 96px;
   display: block;
   object-fit: cover;
 }
 
 .feed-thumb-fallback {
   height: 100%;
-  min-height: 96px;
   display: grid;
   place-items: center;
   color: var(--purple);
@@ -116,43 +130,19 @@ h1 {
   padding: 12px;
 }
 
-.feed-main {
-  display: grid;
-  gap: 12px;
-  min-width: 0;
-  align-content: space-between;
-}
-
-.feed-row {
+.feed-footer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
-  align-items: start;
-}
-
-.feed-title {
-  margin: 0;
-  color: var(--text);
-  font-size: clamp(17px, 3vw, 22px);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
-  font-weight: 850;
-}
-
-.feed-location {
-  margin: 5px 0 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.35;
-  font-weight: 700;
+  align-items: center;
 }
 
 .feed-age {
   width: fit-content;
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
+  min-height: 32px;
+  padding: 0 12px;
   border-radius: 999px;
   background: rgba(90, 0, 230, 0.08);
   color: var(--purple);
@@ -217,9 +207,7 @@ h1 {
   }
 
   .feed-card {
-    grid-template-columns: 104px minmax(0, 1fr);
-    gap: 12px;
-    padding: 10px;
+    padding: 12px;
   }
 
   .feed-map-btn {
