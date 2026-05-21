@@ -46,7 +46,7 @@
   }
 
   function locationText(scene) {
-    return [scene.place, scene.city, scene.country]
+    return [scene.place, scene.country]
       .map(norm)
       .filter(Boolean)
       .filter((value, index, arr) => arr.indexOf(value) === index)
@@ -74,7 +74,7 @@
     return `
       <article class="feed-card">
         <h2 class="feed-title">${escapeHtml(scene.title)}</h2>
-        <p class="feed-location">${escapeHtml(location)}</p>
+        <p class="feed-location"><span class="feed-location-icon" aria-hidden="true">📍</span><span>${escapeHtml(location)}</span></p>
         <a class="feed-thumb" href="${mapUrl(scene)}" aria-label="Open ${escapeHtml(scene.title)} on the map">
           ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(scene.title)} scene image" loading="lazy">` : `<span class="feed-thumb-fallback">No image</span>`}
         </a>
