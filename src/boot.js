@@ -73,6 +73,7 @@ FTS.Boot = (function () {
   async function ensureDataCache() {
     if (!window.FTS?.DataCache) await loadScript("data-cache.js", "data-fts-data-cache");
     await waitFor(() => Boolean(window.FTS?.DataCache));
+    await window.FTS?.DataCache?.ensureDataVersion?.();
   }
 
   async function ensureCSV() {
