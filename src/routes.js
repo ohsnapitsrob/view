@@ -7,6 +7,7 @@ FTS.Routes = (function () {
     "/title",
     "/stats",
     "/national-trust",
+    "/feed",
     "/privacy",
     "/metadata",
     "/person",
