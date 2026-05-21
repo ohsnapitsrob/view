@@ -1,9 +1,14 @@
 window.FTS = window.FTS || {};
 
 FTS.DataCache = (function () {
-  const CACHE_VERSION = "v1";
+  const CACHE_VERSION = "v2";
   const CACHE_PREFIX = "fts:csv";
+  const DATA_VERSION_STORAGE_KEY = "fts:data-version";
+  const DATA_VERSION_URL = "data-version.json";
   const STAGING_CACHE_SETTING_KEY = "fts:staging-cache-enabled";
+
+  let dataVersionPromise = null;
+  let activeDataVersion = null;
 
   function getRuntimeConfig() {
     return window.RUNTIME_CONFIG || {};
@@ -24,6 +29,15 @@ FTS.DataCache = (function () {
   function hasCacheBuster() {
     const p = params();
     return p.has("cacheBust") || p.has("cacheBuster") || p.has("ftsRefresh") || p.has("refreshData");
+  }
+
+  function getRootPath() {
+    if (window.FTS?.AppHeader?.getRootPath) return window.FTS.AppHeader.getRootPath();
+
+    const path = window.location.pathname.replace(/\/+$/, "");
+    const routeNames = ["browse", "explore", "title", "stats", "national-trust", "privacy", "metadata", "person", "genre", "films", "series", "music-videos", "games", "other"];
+    const isNestedRoute = routeNames.some((route) => path.endsWith(`/${route}`));
+    return isNestedRoute ? "../" : "./";
   }
 
   function stagingCacheEnabled() {
@@ -55,17 +69,28 @@ FTS.DataCache = (function () {
     return true;
   }
 
-  function hourlyBucket(date = new Date()) {
-    return date.toISOString().slice(0, 13);
+  function fallbackDataVersion(date = new Date()) {
+    return `fallback:${date.toISOString().slice(0, 13)}`;
   }
 
-  function cacheKey(url, bucket = hourlyBucket()) {
-    return `${CACHE_PREFIX}:${CACHE_VERSION}:${bucket}:${url}`;
+  function cacheKey(url, version = activeDataVersion || fallbackDataVersion()) {
+    return `${CACHE_PREFIX}:${CACHE_VERSION}:${version}:${url}`;
   }
 
-  function canUseStorage() {
+  function localStorageAvailable() {
     try {
       const testKey = `${CACHE_PREFIX}:test`;
+      localStorage.setItem(testKey, "1");
+      localStorage.removeItem(testKey);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function sessionStorageAvailable() {
+    try {
+      const testKey = `${CACHE_PREFIX}:session-test`;
       sessionStorage.setItem(testKey, "1");
       sessionStorage.removeItem(testKey);
       return true;
@@ -75,9 +100,9 @@ FTS.DataCache = (function () {
   }
 
   function readCache(key) {
-    if (!canUseStorage()) return null;
+    if (!localStorageAvailable()) return null;
     try {
-      const raw = sessionStorage.getItem(key);
+      const raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw) : null;
     } catch (err) {
       return null;
@@ -85,26 +110,44 @@ FTS.DataCache = (function () {
   }
 
   function writeCache(key, value) {
-    if (!canUseStorage()) return;
+    if (!localStorageAvailable()) return;
     try {
-      sessionStorage.setItem(key, JSON.stringify(value));
+      localStorage.setItem(key, JSON.stringify(value));
     } catch (err) {
       // Storage may be full or blocked. Cache failure should never block the app.
     }
   }
 
-  function clearCache() {
-    if (!canUseStorage()) return;
+  function clearCsvCache() {
+    if (!localStorageAvailable()) return;
 
     try {
-      Object.keys(sessionStorage).forEach((key) => {
-        if (key.startsWith(CACHE_PREFIX)) sessionStorage.removeItem(key);
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith(CACHE_PREFIX)) localStorage.removeItem(key);
       });
     } catch (err) {
       // Cache clearing should never block the app.
     }
+  }
 
-    log("cleared csv cache");
+  function clearSessionProjectCaches() {
+    if (!sessionStorageAvailable()) return;
+
+    try {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith("fts:")) sessionStorage.removeItem(key);
+      });
+    } catch (err) {
+      // Cache clearing should never block the app.
+    }
+  }
+
+  function clearCache() {
+    clearCsvCache();
+    clearSessionProjectCaches();
+    activeDataVersion = null;
+    dataVersionPromise = null;
+    log("cleared project data cache");
   }
 
   function shouldDebug(options = {}) {
@@ -119,6 +162,74 @@ FTS.DataCache = (function () {
 
   function norm(value) {
     return (value || "").toString().trim();
+  }
+
+  async function fetchDataVersion(options = {}) {
+    const url = `${getRootPath()}${DATA_VERSION_URL}`;
+
+    try {
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Could not load ${DATA_VERSION_URL}`);
+
+      const data = await response.json();
+      const version = norm(data.version || data.updatedAt || data.timestamp);
+
+      if (!version) throw new Error(`${DATA_VERSION_URL} has no version value`);
+
+      return version;
+    } catch (err) {
+      const fallback = fallbackDataVersion();
+      log("data version fallback", { reason: err?.message || "unknown", version: fallback }, options);
+      return fallback;
+    }
+  }
+
+  function storedDataVersion() {
+    try {
+      return localStorage.getItem(DATA_VERSION_STORAGE_KEY) || "";
+    } catch (err) {
+      return "";
+    }
+  }
+
+  function saveDataVersion(version) {
+    try {
+      localStorage.setItem(DATA_VERSION_STORAGE_KEY, version);
+    } catch (err) {}
+  }
+
+  async function ensureDataVersion(options = {}) {
+    if (hasCacheBuster()) {
+      clearCache();
+    }
+
+    if (dataVersionPromise) return dataVersionPromise;
+
+    dataVersionPromise = (async () => {
+      const version = await fetchDataVersion(options);
+      const previous = storedDataVersion();
+
+      if (previous && previous !== version) {
+        clearCsvCache();
+        clearSessionProjectCaches();
+        log("data version changed, cleared caches", { previous, version }, options);
+      }
+
+      if (!previous) {
+        log("data version stored", { version }, options);
+      }
+
+      saveDataVersion(version);
+      activeDataVersion = version;
+
+      window.dispatchEvent(new CustomEvent("fts:data-version-ready", {
+        detail: { version, previous }
+      }));
+
+      return version;
+    })();
+
+    return dataVersionPromise;
   }
 
   function parseCSV(text) {
@@ -217,15 +328,15 @@ FTS.DataCache = (function () {
   }
 
   async function fetchText(url, options = {}) {
-    const bucket = hourlyBucket();
-    const key = cacheKey(url, bucket);
     const enabled = cacheEnabled(options);
+    const version = await ensureDataVersion(options);
+    const key = cacheKey(url, version);
 
     if (enabled) {
       const cached = readCache(key);
       if (cached && typeof cached.text === "string") {
-        log("cache hit", { url, bucket, key }, options);
-        return { text: cached.text, fromCache: true, bucket, key, fetchedAt: cached.fetchedAt };
+        log("cache hit", { url, version, key }, options);
+        return { text: cached.text, fromCache: true, version, key, fetchedAt: cached.fetchedAt };
       }
     }
 
@@ -236,17 +347,17 @@ FTS.DataCache = (function () {
     const fetchedAt = new Date().toISOString();
 
     if (enabled) {
-      writeCache(key, { text, fetchedAt, url, bucket });
+      writeCache(key, { text, fetchedAt, url, version });
     }
 
     log(enabled ? "cache miss, fetched fresh" : "cache bypass, fetched fresh", {
       url,
-      bucket,
+      version,
       key,
       ms: Math.round(performance.now() - startedAt)
     }, options);
 
-    return { text, fromCache: false, bucket, key, fetchedAt };
+    return { text, fromCache: false, version, key, fetchedAt };
   }
 
   async function fetchCSV(url, options = {}) {
@@ -258,7 +369,7 @@ FTS.DataCache = (function () {
       url,
       rows: rows.length,
       fromCache: result.fromCache,
-      bucket: result.bucket,
+      version: result.version,
       ms: Math.round(performance.now() - startedAt)
     }, options);
 
@@ -274,13 +385,14 @@ FTS.DataCache = (function () {
   return {
     fetchText,
     fetchCSV,
-    hourlyBucket,
+    ensureDataVersion,
     cacheKey,
     cacheEnabled,
     clearCache,
     hasCacheBuster,
     isStaging,
     stagingCacheEnabled,
-    setStagingCacheEnabled
+    setStagingCacheEnabled,
+    getDataVersion: () => activeDataVersion
   };
 })();
