@@ -98,6 +98,15 @@ h1 {
   font-size: 14px;
   line-height: 1.35;
   font-weight: 700;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.feed-location-icon {
+  color: var(--purple);
+  line-height: 1.2;
+  flex: 0 0 auto;
 }
 
 .feed-thumb {
