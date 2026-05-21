@@ -74,7 +74,7 @@
     return `
       <article class="feed-card">
         <h2 class="feed-title">${escapeHtml(scene.title)}</h2>
-        <p class="feed-location"><span class="feed-location-icon" aria-hidden="true">📍</span><span>${escapeHtml(location)}</span></p>
+        <p class="feed-location">${escapeHtml(location)}</p>
         <a class="feed-thumb" href="${mapUrl(scene)}" aria-label="Open ${escapeHtml(scene.title)} on the map">
           ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(scene.title)} scene image" loading="lazy">` : `<span class="feed-thumb-fallback">No image</span>`}
         </a>
