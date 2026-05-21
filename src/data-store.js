@@ -1,7 +1,7 @@
 window.FTS = window.FTS || {};
 
 FTS.DataStore = (function () {
-  const DATASET_CACHE_VERSION = "v3";
+  const DATASET_CACHE_VERSION = "v4";
   const DATASET_CACHE_PREFIX = "fts:dataset";
   const store = new Map();
   const pending = new Map();
@@ -88,8 +88,8 @@ FTS.DataStore = (function () {
     return `${baseKey}:${visibilityMode()}`;
   }
 
-  function hourlyBucket(date = new Date()) {
-    return date.toISOString().slice(0, 13);
+  function dataVersionKey() {
+    return window.FTS?.DataCache?.getDataVersion?.() || "unversioned";
   }
 
   function storageAvailable() {
@@ -103,8 +103,8 @@ FTS.DataStore = (function () {
     }
   }
 
-  function datasetStorageKey(keyName, bucket = hourlyBucket()) {
-    return `${DATASET_CACHE_PREFIX}:${DATASET_CACHE_VERSION}:${bucket}:${encodeURIComponent(keyName)}`;
+  function datasetStorageKey(keyName) {
+    return `${DATASET_CACHE_PREFIX}:${DATASET_CACHE_VERSION}:${dataVersionKey()}:${encodeURIComponent(keyName)}`;
   }
 
   function serializeDataset(value) {
@@ -144,7 +144,7 @@ FTS.DataStore = (function () {
       const raw = sessionStorage.getItem(storageKey);
       if (!raw) return null;
       const value = deserializeDataset(raw);
-      log("session hit", { key: keyName, storageKey }, options);
+      log("session hit", { key: keyName, storageKey, dataVersion: dataVersionKey() }, options);
       return value;
     } catch (err) {
       sessionStorage.removeItem(storageKey);
@@ -159,7 +159,7 @@ FTS.DataStore = (function () {
 
     try {
       sessionStorage.setItem(storageKey, serializeDataset(value));
-      log("session stored", { key: keyName, storageKey }, options);
+      log("session stored", { key: keyName, storageKey, dataVersion: dataVersionKey() }, options);
     } catch (err) {
       log("session store skipped", { key: keyName, reason: err?.message || "storage failed" }, options);
     }
@@ -170,7 +170,7 @@ FTS.DataStore = (function () {
 
     try {
       Object.keys(sessionStorage).forEach((storageKey) => {
-        const matchesPrefix = storageKey.startsWith(`${DATASET_CACHE_PREFIX}:${DATASET_CACHE_VERSION}:`);
+        const matchesPrefix = storageKey.startsWith(`${DATASET_CACHE_PREFIX}:`);
         const matchesKey = typeof keyName !== "string" || storageKey.endsWith(`:${encodeURIComponent(keyName)}`);
         if (matchesPrefix && matchesKey) sessionStorage.removeItem(storageKey);
       });
@@ -204,6 +204,7 @@ FTS.DataStore = (function () {
     store.set(keyName, value);
     metadata.set(keyName, {
       updatedAt: new Date().toISOString(),
+      dataVersion: dataVersionKey(),
       ...info
     });
 
@@ -241,7 +242,7 @@ FTS.DataStore = (function () {
 
   async function remember(keyName, loader, options = {}) {
     if (has(keyName) && options.force !== true) {
-      log("memory hit", { key: keyName });
+      log("memory hit", { key: keyName, dataVersion: dataVersionKey() });
       return get(keyName);
     }
 
@@ -263,7 +264,7 @@ FTS.DataStore = (function () {
 
     const promise = (async () => {
       try {
-        log("building dataset", { key: keyName, mode: visibilityMode() });
+        log("building dataset", { key: keyName, mode: visibilityMode(), dataVersion: dataVersionKey() });
 
         const value = await loader();
 
@@ -485,7 +486,8 @@ FTS.DataStore = (function () {
   function snapshot() {
     return {
       keys: Array.from(store.keys()),
-      metadata: Object.fromEntries(metadata.entries())
+      metadata: Object.fromEntries(metadata.entries()),
+      dataVersion: dataVersionKey()
     };
   }
 
