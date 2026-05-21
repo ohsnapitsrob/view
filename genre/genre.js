@@ -158,14 +158,13 @@
   }
 
   function renderGroups(groups) {
-    const showGroupHeadings = groups.length > 1;
     gridEl.classList.add("genre-grid-grouped");
 
     gridEl.innerHTML = `
       <div class="genre-groups">
         ${groups.map((group) => `
           <section class="genre-group">
-            ${showGroupHeadings ? `<h2 class="genre-group-title">${escapeHtml(group.label)}</h2>` : ""}
+            <h2 class="genre-group-title">${escapeHtml(group.label)}</h2>
             <div class="genre-group-grid">
               ${group.items.map(posterCard).join("")}
             </div>
