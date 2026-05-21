@@ -6,7 +6,7 @@ FTS.Boot = (function () {
   function nestedRoute() {
     const path = window.location.pathname.replace(/\/+$/, "");
     const routeNames = [
-      "browse", "explore", "title", "stats", "national-trust", "privacy", "metadata",
+      "browse", "explore", "title", "stats", "national-trust", "feed", "privacy", "metadata",
       "person", "genre", "films", "series", "music-videos", "games", "other"
     ];
 
